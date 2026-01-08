@@ -1,0 +1,139 @@
+
+import React, { useState, useEffect } from 'react';
+import { HashRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { 
+  LayoutDashboard, 
+  ShoppingBag, 
+  History, 
+  ShieldCheck, 
+  LogOut, 
+  Menu, 
+  X,
+  Trophy,
+  Zap,
+  UserCircle
+} from 'lucide-react';
+import { UserProfile, RankTitle, UserRole } from './types';
+import { getUser, saveUser, getStudents } from './utils/storage';
+import { RANKS } from './constants';
+import Dashboard from './components/Dashboard';
+import Shop from './components/Shop';
+import Redemptions from './components/Redemptions';
+import Admin from './components/Admin';
+
+const Navigation = ({ user, currentRank, onSwitchUser }: { user: UserProfile, currentRank: RankTitle, onSwitchUser: () => void }) => {
+  const location = useLocation();
+  const [isOpen, setIsOpen] = useState(false);
+
+  const links = [
+    { path: '/', label: '總覽', icon: LayoutDashboard },
+    { path: '/shop', label: '點數商城', icon: ShoppingBag },
+    { path: '/history', label: '兌換紀錄', icon: History },
+  ];
+
+  if (user.role === UserRole.ADMIN || true) { // Demo 期間開放所有權限
+    links.push({ path: '/admin', label: '管理後台', icon: ShieldCheck });
+  }
+
+  return (
+    <nav className="bg-white border-r border-slate-200 w-full md:w-64 md:fixed md:inset-y-0 h-auto md:h-full z-50 shadow-sm">
+      <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="bg-indigo-600 p-2 rounded-lg text-white">
+            <Zap size={20} />
+          </div>
+          <span className="text-xl font-bold text-slate-800 tracking-tight">學習工坊</span>
+        </div>
+        <button onClick={() => setIsOpen(!isOpen)} className="md:hidden text-slate-600">
+          {isOpen ? <X /> : <Menu />}
+        </button>
+      </div>
+
+      <div className={`${isOpen ? 'block' : 'hidden'} md:block p-4 space-y-2`}>
+        {links.map((link) => {
+          const Icon = link.icon;
+          const isActive = location.pathname === link.path;
+          return (
+            <Link
+              key={link.path}
+              to={link.path}
+              onClick={() => setIsOpen(false)}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                isActive 
+                  ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' 
+                  : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <Icon size={20} />
+              <span>{link.label}</span>
+            </Link>
+          );
+        })}
+      </div>
+
+      <div className={`${isOpen ? 'block' : 'hidden'} md:block absolute bottom-0 w-full p-6 border-t border-slate-100 bg-white`}>
+        <div className="flex items-center gap-3 mb-4">
+          <img src={user.avatar} className="w-10 h-10 rounded-full border-2 border-slate-100 object-cover" alt="avatar" />
+          <div className="overflow-hidden">
+            <p className="font-bold text-slate-800 truncate text-sm">{user.name}</p>
+            <div className={`text-[9px] px-2 py-0.5 rounded-full inline-block text-white font-black ${currentRank.color}`}>
+              {currentRank.icon} {currentRank.name}
+            </div>
+          </div>
+        </div>
+        <button 
+          onClick={onSwitchUser}
+          className="flex items-center gap-2 text-indigo-600 hover:text-indigo-800 transition-colors text-xs font-bold w-full bg-indigo-50 p-2 rounded-lg justify-center mb-2"
+        >
+          <UserCircle size={14} />
+          <span>切換使用者 (Demo)</span>
+        </button>
+        <button className="flex items-center gap-2 text-slate-400 hover:text-red-500 transition-colors text-xs font-medium w-full px-2">
+          <LogOut size={14} />
+          <span>登出系統</span>
+        </button>
+      </div>
+    </nav>
+  );
+};
+
+const App: React.FC = () => {
+  const [user, setUser] = useState<UserProfile>(getUser());
+  
+  const currentRank = RANKS.reduce((prev, curr) => {
+    if (user.totalEarned >= curr.threshold) return curr;
+    return prev;
+  }, RANKS[0]);
+
+  const refreshUser = () => setUser(getUser());
+
+  const handleSwitchUser = () => {
+    const students = getStudents();
+    const currentIndex = students.findIndex(s => s.id === user.id);
+    const nextIndex = (currentIndex + 1) % students.length;
+    const nextUser = students[nextIndex];
+    saveUser(nextUser);
+    refreshUser();
+  };
+
+  return (
+    <HashRouter>
+      <div className="min-h-screen flex flex-col md:flex-row bg-[#fbfcfd]">
+        <Navigation user={user} currentRank={currentRank} onSwitchUser={handleSwitchUser} />
+        
+        <main className="flex-1 md:ml-64 p-4 md:p-8">
+          <div className="max-w-6xl mx-auto">
+            <Routes>
+              <Route path="/" element={<Dashboard user={user} rank={currentRank} onUserUpdate={refreshUser} />} />
+              <Route path="/shop" element={<Shop user={user} onUserUpdate={refreshUser} />} />
+              <Route path="/history" element={<Redemptions user={user} />} />
+              <Route path="/admin" element={<Admin onRefresh={refreshUser} />} />
+            </Routes>
+          </div>
+        </main>
+      </div>
+    </HashRouter>
+  );
+};
+
+export default App;
