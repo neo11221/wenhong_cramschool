@@ -185,8 +185,8 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
   };
 
   const filteredRedemptions = redemptions.filter(r =>
-    r.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.id.includes(searchTerm)
+    (r.productName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+    (r.id?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
 
   const getRank = (totalEarned: number) => {

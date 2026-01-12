@@ -113,6 +113,7 @@ export const saveStudent = async (student: UserProfile) => {
     await setDoc(doc(db, COLLECTIONS.STUDENTS, student.id), student);
   } catch (error) {
     console.error('Error saving student:', error);
+    alert('儲存學生資料失敗，請檢查網路或權限');
   }
 };
 
@@ -196,7 +197,19 @@ export const logoutUser = () => {
 export const getRedemptions = async (): Promise<Redemption[]> => {
   try {
     const querySnapshot = await getDocs(collection(db, COLLECTIONS.REDEMPTIONS));
-    return querySnapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }) as Redemption);
+    return querySnapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        status: 'pending',
+        pointsSpent: 0,
+        productName: '未知商品',
+        timestamp: Date.now(),
+        userId: 'unknown',
+        qrCodeData: '',
+        ...data
+      } as Redemption;
+    });
   } catch (error) {
     console.error('Error fetching redemptions:', error);
     return [];
@@ -422,6 +435,7 @@ export const addWish = async (wish: Wish) => {
     await setDoc(doc(db, COLLECTIONS.WISHES, wish.id), wish);
   } catch (error) {
     console.error('Error adding wish:', error);
+    alert('許願失敗！請檢查是否已開啟 Firestore 寫入權限 (Test Mode)');
   }
 };
 
@@ -472,7 +486,19 @@ export const subscribeToRedemptions = (
   callback: (redemptions: Redemption[]) => void
 ): Unsubscribe => {
   return onSnapshot(collection(db, COLLECTIONS.REDEMPTIONS), (snapshot) => {
-    const redemptions = snapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }) as Redemption);
+    const redemptions = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        status: 'pending',
+        pointsSpent: 0,
+        productName: '未知商品',
+        timestamp: Date.now(),
+        userId: 'unknown',
+        qrCodeData: '',
+        ...data
+      } as Redemption;
+    });
     callback(redemptions);
   });
 };
