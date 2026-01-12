@@ -2,14 +2,18 @@
 import React, { useState, useEffect } from 'react';
 import { QrCode, Calendar, Clock, CheckCircle2, AlertCircle, X, History } from 'lucide-react';
 import { Redemption, UserProfile } from '../types';
-import { getRedemptions } from '../utils/storage';
+import { subscribeToRedemptions } from '../utils/storage';
 
 const Redemptions: React.FC<{ user: UserProfile }> = ({ user }) => {
   const [redemptions, setRedemptions] = useState<Redemption[]>([]);
   const [viewingRedemption, setViewingRedemption] = useState<Redemption | null>(null);
 
   useEffect(() => {
-    setRedemptions(getRedemptions().filter(r => r.userId === user.id));
+    // 使用實時監聽替代一次性讀取 (getRedemptions is async now)
+    const unsubscribe = subscribeToRedemptions((allRedemptions) => {
+      setRedemptions(allRedemptions.filter(r => r.userId === user.id));
+    });
+    return () => unsubscribe();
   }, [user.id]);
 
   const formatDate = (ts: number) => {
@@ -46,7 +50,7 @@ const Redemptions: React.FC<{ user: UserProfile }> = ({ user }) => {
             >
               <div className="flex gap-4">
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${r.status === 'completed' ? 'bg-green-50 text-green-600' :
-                    r.status === 'pending' ? 'bg-indigo-50 text-indigo-600' : 'bg-red-50 text-red-600'
+                  r.status === 'pending' ? 'bg-indigo-50 text-indigo-600' : 'bg-red-50 text-red-600'
                   }`}>
                   {r.status === 'completed' ? <CheckCircle2 size={24} /> :
                     r.status === 'pending' ? <Clock size={24} /> : <AlertCircle size={24} />}
@@ -62,7 +66,7 @@ const Redemptions: React.FC<{ user: UserProfile }> = ({ user }) => {
 
               <div className="flex items-center gap-4">
                 <div className={`px-4 py-1.5 rounded-full text-xs font-bold ${r.status === 'completed' ? 'bg-green-100 text-green-700' :
-                    r.status === 'pending' ? 'bg-indigo-100 text-indigo-700' : 'bg-red-100 text-red-700'
+                  r.status === 'pending' ? 'bg-indigo-100 text-indigo-700' : 'bg-red-100 text-red-700'
                   }`}>
                   {r.status === 'completed' ? '已核銷' : r.status === 'pending' ? '待領取' : '已取消'}
                 </div>
