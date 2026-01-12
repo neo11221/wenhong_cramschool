@@ -16,6 +16,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, rank, onUserUpdate }) => {
   const [message, setMessage] = useState('正在獲取導師的建議...');
   const [missions, setMissions] = useState<Mission[]>([]);
   const [completingId, setCompletingId] = useState<string | null>(null);
+  const [completedMissionIds, setCompletedMissionIds] = useState<Set<string>>(new Set());
 
   const nextRank = RANKS[RANKS.indexOf(rank) + 1] || null;
   const progress = nextRank
@@ -30,9 +31,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user, rank, onUserUpdate }) => {
     fetchContent();
 
     // Subscribe to real-time missions updates
-    const unsubscribe = subscribeToMissions((allMissions) => {
+    const unsubscribe = subscribeToMissions(async (allMissions) => {
       // Filter only active missions
-      setMissions(allMissions.filter(m => m.isActive));
+      const activeMissions = allMissions.filter(m => m.isActive);
+      setMissions(activeMissions);
+
+      // Check completion status for all active missions
+      const statusSet = new Set<string>();
+      for (const m of activeMissions) {
+        const isCompleted = await hasCompletedMission(user.id, m.id);
+        if (isCompleted) statusSet.add(m.id);
+      }
+      setCompletedMissionIds(statusSet);
     });
 
     return () => unsubscribe();
@@ -70,6 +80,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, rank, onUserUpdate }) => {
       await saveUser(updatedUser);
       onUserUpdate();
       setCompletingId(null);
+      setCompletedMissionIds(prev => new Set(prev).add(mission.id));
       alert(`🎉 恭喜完成任務！\n共獲得 ${finalPoints} 點。`);
     }, 1000);
   };
@@ -179,70 +190,66 @@ const Dashboard: React.FC<DashboardProps> = ({ user, rank, onUserUpdate }) => {
         </div>
 
         <div className="grid grid-cols-1 gap-6">
-          {missions.map(mission => {
-            const [isCompleted, setIsCompleted] = React.useState(false);
-            React.useEffect(() => {
-              hasCompletedMission(user.id, mission.id).then(setIsCompleted);
-            }, [mission.id]);
-            return (
-              <div
-                key={mission.id}
-                className={`bg-white border-2 border-slate-50 p-8 rounded-[2.5rem] transition-all group relative overflow-hidden ${isCompleted ? 'opacity-60 grayscale' : 'shadow-sm hover:shadow-xl'
-                  } ${mission.id === completingId ? 'animate-pulse' : ''}`}
-              >
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-                  <div className="flex gap-8 items-start">
-                    <div className={`w-20 h-20 rounded-3xl flex items-center justify-center shrink-0 shadow-inner ${mission.type === 'normal' ? 'bg-emerald-50 text-emerald-600' :
-                      mission.type === 'challenge' ? 'bg-orange-50 text-orange-600' :
-                        'bg-rose-50 text-rose-600'
+          const isCompleted = completedMissionIds.has(mission.id);
+          return (
+          <div
+            key={mission.id}
+            className={`bg-white border-2 border-slate-50 p-8 rounded-[2.5rem] transition-all group relative overflow-hidden ${isCompleted ? 'opacity-60 grayscale' : 'shadow-sm hover:shadow-xl'
+              } ${mission.id === completingId ? 'animate-pulse' : ''}`}
+          >
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
+              <div className="flex gap-8 items-start">
+                <div className={`w-20 h-20 rounded-3xl flex items-center justify-center shrink-0 shadow-inner ${mission.type === 'normal' ? 'bg-emerald-50 text-emerald-600' :
+                  mission.type === 'challenge' ? 'bg-orange-50 text-orange-600' :
+                    'bg-rose-50 text-rose-600'
+                  }`}>
+                  {isCompleted ? <CheckCircle size={36} /> : (
+                    mission.type === 'normal' ? <Target size={36} /> :
+                      mission.type === 'challenge' ? <Flame size={36} /> :
+                        <Trophy size={36} />
+                  )}
+                </div>
+                <div>
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${mission.type === 'normal' ? 'bg-emerald-100 text-emerald-700' :
+                      mission.type === 'challenge' ? 'bg-orange-100 text-orange-700' :
+                        'bg-rose-100 text-rose-700'
                       }`}>
-                      {isCompleted ? <CheckCircle size={36} /> : (
-                        mission.type === 'normal' ? <Target size={36} /> :
-                          mission.type === 'challenge' ? <Flame size={36} /> :
-                            <Trophy size={36} />
-                      )}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${mission.type === 'normal' ? 'bg-emerald-100 text-emerald-700' :
-                          mission.type === 'challenge' ? 'bg-orange-100 text-orange-700' :
-                            'bg-rose-100 text-rose-700'
-                          }`}>
-                          {mission.type === 'normal' ? '一般任務' : mission.type === 'challenge' ? '挑戰任務' : '困難任務'}
-                        </span>
-                      </div>
-                      <h3 className="text-2xl font-black text-slate-800 transition-colors">{mission.title}</h3>
-                      <p className="text-slate-500 mt-2 leading-relaxed text-lg font-medium max-w-2xl">{mission.description}</p>
-                    </div>
+                      {mission.type === 'normal' ? '一般任務' : mission.type === 'challenge' ? '挑戰任務' : '困難任務'}
+                    </span>
                   </div>
-
-                  <div className="flex flex-col md:items-end gap-6 shrink-0">
-                    <div className="flex flex-col items-end">
-                      <span className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-tighter">完成獎勵點數</span>
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-4xl font-black text-indigo-600 tracking-tighter">
-                          {mission.points}
-                        </span>
-                        <span className="text-sm font-bold text-slate-400">PTS</span>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleCompleteMission(mission)}
-                      disabled={completingId !== null || isCompleted}
-                      className={`px-10 py-5 rounded-2xl font-black transition-all flex items-center gap-3 shadow-xl ${isCompleted
-                        ? 'bg-slate-200 text-slate-500 cursor-not-allowed shadow-none'
-                        : (mission.type === 'normal' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100' :
-                          mission.type === 'challenge' ? 'bg-orange-600 hover:bg-orange-700 shadow-orange-100' :
-                            'bg-rose-600 hover:bg-rose-700 shadow-rose-100')
-                        } text-white text-lg active:scale-95 disabled:active:scale-100`}
-                    >
-                      {isCompleted ? '已完成' : completingId === mission.id ? '提交結果中...' : '提交任務結果'}
-                      {!isCompleted && <ChevronRight size={20} />}
-                    </button>
-                  </div>
+                  <h3 className="text-2xl font-black text-slate-800 transition-colors">{mission.title}</h3>
+                  <p className="text-slate-500 mt-2 leading-relaxed text-lg font-medium max-w-2xl">{mission.description}</p>
                 </div>
               </div>
-            );
+
+              <div className="flex flex-col md:items-end gap-6 shrink-0">
+                <div className="flex flex-col items-end">
+                  <span className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-tighter">完成獎勵點數</span>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-4xl font-black text-indigo-600 tracking-tighter">
+                      {mission.points}
+                    </span>
+                    <span className="text-sm font-bold text-slate-400">PTS</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleCompleteMission(mission)}
+                  disabled={completingId !== null || isCompleted}
+                  className={`px-10 py-5 rounded-2xl font-black transition-all flex items-center gap-3 shadow-xl ${isCompleted
+                    ? 'bg-slate-200 text-slate-500 cursor-not-allowed shadow-none'
+                    : (mission.type === 'normal' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100' :
+                      mission.type === 'challenge' ? 'bg-orange-600 hover:bg-orange-700 shadow-orange-100' :
+                        'bg-rose-600 hover:bg-rose-700 shadow-rose-100')
+                    } text-white text-lg active:scale-95 disabled:active:scale-100`}
+                >
+                  {isCompleted ? '已完成' : completingId === mission.id ? '提交結果中...' : '提交任務結果'}
+                  {!isCompleted && <ChevronRight size={20} />}
+                </button>
+              </div>
+            </div>
+          </div>
+          );
           })}
         </div>
       </section>
