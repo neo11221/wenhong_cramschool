@@ -1,10 +1,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { Trophy, TrendingUp, Sparkles, CheckCircle, ChevronRight, Medal, Flame, Star, Target, Clock } from 'lucide-react';
-import { UserProfile, RankTitle, Mission } from '../types';
+import { UserProfile, RankTitle, Mission, MissionSubmission } from '../types';
 import { RANKS } from '../constants';
 import { getEncouragement } from '../services/geminiService';
-import { saveUser, hasCompletedMission, addChallengeHistory, subscribeToMissions } from '../utils/storage';
+import { saveUser, hasCompletedMission, addChallengeHistory, subscribeToMissions, subscribeToMissionSubmissions, submitMission } from '../utils/storage';
 
 interface DashboardProps {
   user: UserProfile;
@@ -15,6 +15,7 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ user, rank, onUserUpdate }) => {
   const [message, setMessage] = useState('正在獲取導師的建議...');
   const [missions, setMissions] = useState<Mission[]>([]);
+  const [submissions, setSubmissions] = useState<MissionSubmission[]>([]);
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [completedMissionIds, setCompletedMissionIds] = useState<Set<string>>(new Set());
 
@@ -45,7 +46,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, rank, onUserUpdate }) => {
       setCompletedMissionIds(statusSet);
     });
 
-    return () => unsubscribe();
+    const unsubscribeSubmissions = subscribeToMissionSubmissions((allSubmissions) => {
+      setSubmissions(allSubmissions.filter(s => s.userId === user.id));
+    });
+
+    return () => {
+      unsubscribe();
+      unsubscribeSubmissions();
+    };
   }, [user.id, rank]);
 
   const handleCompleteMission = async (mission: Mission) => {
@@ -59,28 +67,22 @@ const Dashboard: React.FC<DashboardProps> = ({ user, rank, onUserUpdate }) => {
 
     setCompletingId(mission.id);
 
-    const finalPoints = mission.points;
-
     setTimeout(async () => {
-      // 1. Record Completion
-      await addChallengeHistory({
-        id: `h_${Date.now()}`,
+      // Create a submission instead of immediate reward
+      const submission: MissionSubmission = {
+        id: `sub_${Date.now()}`,
         userId: user.id,
+        userName: user.name,
         missionId: mission.id,
-        timestamp: Date.now()
-      });
-
-      // 2. Award Points
-      const updatedUser = {
-        ...user,
-        points: user.points + finalPoints,
-        totalEarned: user.totalEarned + finalPoints
+        missionTitle: mission.title,
+        points: mission.points,
+        timestamp: Date.now(),
+        status: 'pending'
       };
-      await saveUser(updatedUser);
-      onUserUpdate();
+
+      await submitMission(submission);
       setCompletingId(null);
-      setCompletedMissionIds(prev => new Set(prev).add(mission.id));
-      alert(`🎉 恭喜完成任務！\n共獲得 ${finalPoints} 點。`);
+      alert(`✅ 任務已提交！\n請等待導師審核後即可獲得點數。`);
     }, 1000);
   };
 

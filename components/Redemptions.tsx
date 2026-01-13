@@ -7,6 +7,10 @@ import { subscribeToRedemptions } from '../utils/storage';
 const Redemptions: React.FC<{ user: UserProfile }> = ({ user }) => {
   const [redemptions, setRedemptions] = useState<Redemption[]>([]);
   const [viewingRedemption, setViewingRedemption] = useState<Redemption | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
 
   useEffect(() => {
     // 使用實時監聽替代一次性讀取 (getRedemptions is async now)
@@ -26,14 +30,31 @@ const Redemptions: React.FC<{ user: UserProfile }> = ({ user }) => {
     });
   };
 
+  const filteredRedemptions = redemptions.filter(r => {
+    const d = new Date(r.timestamp);
+    const m = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    return m === selectedMonth;
+  });
+
   return (
     <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-      <header>
-        <h1 className="text-3xl font-bold text-slate-800">兌換紀錄</h1>
-        <p className="text-slate-500 mt-1">追蹤您的點數去向與商品兌換狀態</p>
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-800">兌換紀錄</h1>
+          <p className="text-slate-500 mt-1">追蹤您的點數去向與商品兌換狀態</p>
+        </div>
+        <div className="flex items-center gap-3 bg-white p-2 rounded-2xl border border-slate-100 shadow-sm">
+          <Calendar size={18} className="text-indigo-600 ml-2" />
+          <input
+            type="month"
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="border-none bg-transparent font-bold text-slate-600 outline-none p-1"
+          />
+        </div>
       </header>
 
-      {redemptions.length === 0 ? (
+      {filteredRedemptions.length === 0 ? (
         <div className="bg-white rounded-3xl p-12 text-center border border-dashed border-slate-200">
           <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-300">
             <History size={40} />
@@ -43,7 +64,7 @@ const Redemptions: React.FC<{ user: UserProfile }> = ({ user }) => {
         </div>
       ) : (
         <div className="space-y-4">
-          {redemptions.map(r => (
+          {filteredRedemptions.map(r => (
             <div
               key={r.id}
               className="bg-white rounded-3xl border border-slate-100 p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm hover:shadow-md transition-shadow"

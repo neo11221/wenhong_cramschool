@@ -89,3 +89,14 @@ export interface PointReason {
   id: string;
   title: string;
 }
+
+export interface MissionSubmission {
+  id: string;
+  userId: string;
+  userName: string;
+  missionId: string;
+  missionTitle: string;
+  points: number;
+  timestamp: number;
+  status: 'pending' | 'approved' | 'rejected';
+}

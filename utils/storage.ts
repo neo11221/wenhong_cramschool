@@ -12,7 +12,7 @@ import {
   Unsubscribe,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { UserProfile, Redemption, UserRole, Product, Wish, Mission, ChallengeHistory, PointReason } from '../types';
+import { UserProfile, Redemption, UserRole, Product, Wish, Mission, ChallengeHistory, PointReason, MissionSubmission } from '../types';
 import { STORAGE_KEYS, PRODUCTS } from '../constants';
 
 // Collections
@@ -24,6 +24,7 @@ const COLLECTIONS = {
   REDEMPTIONS: 'redemptions',
   CHALLENGE_HISTORY: 'challengeHistory',
   POINT_REASONS: 'pointReasons',
+  MISSION_SUBMISSIONS: 'missionSubmissions',
 };
 
 const INITIAL_STUDENTS: UserProfile[] = [
@@ -356,6 +357,65 @@ export const hasCompletedMission = async (
   }
 };
 
+// --- Mission Submissions Management ---
+
+export const submitMission = async (submission: MissionSubmission) => {
+  try {
+    await setDoc(doc(db, COLLECTIONS.MISSION_SUBMISSIONS, submission.id), submission);
+  } catch (error) {
+    console.error('Error submitting mission:', error);
+  }
+};
+
+export const approveMission = async (submissionId: string) => {
+  try {
+    const docRef = doc(db, COLLECTIONS.MISSION_SUBMISSIONS, submissionId);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      const submission = docSnap.data() as MissionSubmission;
+
+      // 1. Update submission status
+      await updateDoc(docRef, { status: 'approved' });
+
+      // 2. Add to challenge history
+      await addChallengeHistory({
+        id: `h_${Date.now()}`,
+        userId: submission.userId,
+        missionId: submission.missionId,
+        timestamp: Date.now()
+      });
+
+      // 3. Award points to student
+      const studentDoc = doc(db, COLLECTIONS.STUDENTS, submission.userId);
+      const studentSnap = await getDoc(studentDoc);
+      if (studentSnap.exists()) {
+        const student = studentSnap.data() as UserProfile;
+        await updateDoc(studentDoc, {
+          points: student.points + submission.points,
+          totalEarned: student.totalEarned + submission.points
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Error approving mission:', error);
+  }
+};
+
+export const rejectMission = async (submissionId: string) => {
+  try {
+    const docRef = doc(db, COLLECTIONS.MISSION_SUBMISSIONS, submissionId);
+    await updateDoc(docRef, { status: 'rejected' });
+  } catch (error) {
+    console.error('Error rejecting mission:', error);
+  }
+};
+
+export const subscribeToMissionSubmissions = (callback: (submissions: MissionSubmission[]) => void): Unsubscribe => {
+  return onSnapshot(collection(db, COLLECTIONS.MISSION_SUBMISSIONS), (snapshot) => {
+    callback(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }) as MissionSubmission));
+  });
+};
+
 // --- Products Management ---
 
 export const getProducts = async (): Promise<Product[]> => {
@@ -409,11 +469,7 @@ export const updateProduct = async (product: Product) => {
 export const updateProductStock = async (productId: string, quantity: number) => {
   try {
     const docRef = doc(db, COLLECTIONS.PRODUCTS, productId);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      const product = docSnap.data() as Product;
-      await updateDoc(docRef, { stock: Math.max(0, product.stock - quantity) });
-    }
+    await updateDoc(docRef, { stock: Math.max(0, quantity) });
   } catch (error) {
     console.error('Error updating product stock:', error);
   }

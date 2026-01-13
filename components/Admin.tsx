@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { Camera, ShieldCheck, Check, Search, X, ScanLine, Gift, History as HistoryIcon, GraduationCap, Users, UserPlus, Package, Plus, Target, Clock, Trash2, Heart } from 'lucide-react';
-import { Redemption, UserProfile, Product, UserRole, Mission, PointReason, Wish } from '../types';
-import { updateRedemptionStatus, approveStudent, deleteStudent, addProduct, addMission, toggleMission, saveStudents, subscribeToStudents, subscribeToRedemptions, subscribeToProducts, subscribeToMissions, deleteProduct, addPointReason, deletePointReason, subscribeToPointReasons, subscribeToWishes, deleteWish } from '../utils/storage';
+import { Camera, ShieldCheck, Check, Search, X, ScanLine, Gift, History as HistoryIcon, GraduationCap, Users, UserPlus, Package, Plus, Target, Clock, Trash2, Heart, CheckCircle } from 'lucide-react';
+import { Redemption, UserProfile, Product, UserRole, Mission, PointReason, Wish, MissionSubmission } from '../types';
+import { updateRedemptionStatus, approveStudent, deleteStudent, addProduct, addMission, toggleMission, saveStudents, subscribeToStudents, subscribeToRedemptions, subscribeToProducts, subscribeToMissions, deleteProduct, addPointReason, deletePointReason, subscribeToPointReasons, subscribeToWishes, deleteWish, subscribeToMissionSubmissions, approveMission, rejectMission, updateProductStock } from '../utils/storage';
 import { RANKS } from '../constants';
 
 interface AdminProps {
@@ -10,7 +10,7 @@ interface AdminProps {
 }
 
 const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
-  const [activeTab, setActiveTab] = useState<'roster' | 'scan' | 'points' | 'history' | 'approval' | 'products' | 'missions' | 'wishes'>('roster');
+  const [activeTab, setActiveTab] = useState<'roster' | 'scan' | 'points' | 'history' | 'approval' | 'products' | 'missions' | 'wishes' | 'mission_approval'>('roster');
   const [isScanning, setIsScanning] = useState(false);
   const [redemptions, setRedemptions] = useState<Redemption[]>([]);
   const [students, setStudents] = useState<UserProfile[]>([]);
@@ -19,6 +19,7 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
   const [missions, setMissions] = useState<Mission[]>([]);
   const [pointReasons, setPointReasons] = useState<PointReason[]>([]);
   const [wishes, setWishes] = useState<Wish[]>([]);
+  const [submissions, setSubmissions] = useState<MissionSubmission[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [scanResult, setScanResult] = useState<Redemption | null>(null);
 
@@ -62,6 +63,7 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
     const unsubMissions = subscribeToMissions(setMissions);
     const unsubReasons = subscribeToPointReasons(setPointReasons);
     const unsubWishes = subscribeToWishes(setWishes);
+    const unsubSubmissions = subscribeToMissionSubmissions(setSubmissions);
 
     return () => {
       unsubStudents();
@@ -70,6 +72,7 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
       unsubMissions();
       unsubReasons();
       unsubWishes();
+      unsubSubmissions();
     };
   }, [targetStudentId]);
 
@@ -204,22 +207,19 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
     await toggleMission(id);
   };
 
-  const handleUpdateStock = (id: string, newStock: number) => {
-    // This is a bit hacky, reusing updateProductStock logic but we need ability to SET stock, not just decrease
-    // For now let's just use the exposed method to decrease using negative numbers if we wanted, 
-    // but the requirement "設定庫存量" implies setting.
-    // Since my storage helper reduces, let's implement a direct update in storage ideally.
-    // But for speed, I'll rely on a simpler approach: 
-    // Re-implement update in storage was actually `saveProducts`.
-    // Let's just create a helper here or modify storage. 
-    // Actually `updateProduct` was added to storage in my plan.
-    const product = products.find(p => p.id === id);
-    if (product) {
-      // Using the generic updateProduct from previously added code
-      // Wait, I added updateProduct support in storage.ts
-      // Let's use it.
-      // Import addProduct above handles adding. 
-      // I need to import updateProduct too.
+  const handleUpdateStock = async (id: string, newStock: number) => {
+    await updateProductStock(id, newStock);
+    alert('庫存更新成功！');
+  };
+
+  const handleApproveMission = async (id: string) => {
+    await approveMission(id);
+    alert('任務審核已核准！點數已發放。');
+  };
+
+  const handleRejectMission = async (id: string) => {
+    if (confirm('確定要拒絕此任務提交嗎？')) {
+      await rejectMission(id);
     }
   };
 
@@ -279,6 +279,17 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
           className={`flex items-center justify-center gap-3 py-4 px-6 rounded-2xl font-black transition-all whitespace-nowrap ${activeTab === 'products' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}
         >
           <Package size={18} /> <span>商品</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('mission_approval')}
+          className={`flex items-center justify-center gap-3 py-4 px-6 rounded-2xl font-black transition-all whitespace-nowrap ${activeTab === 'mission_approval' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50 relative'}`}
+        >
+          <CheckCircle size={18} /> <span>任務審核</span>
+          {submissions.filter(s => s.status === 'pending').length > 0 && (
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-pink-500 rounded-full text-white text-[10px] flex items-center justify-center border-2 border-white">
+              {submissions.filter(s => s.status === 'pending').length}
+            </span>
+          )}
         </button>
         <button
           onClick={() => setActiveTab('scan')}
@@ -601,23 +612,37 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {products.map((product) => (
-              <div key={product.id} className="border border-slate-100 rounded-2xl p-4 flex gap-4 items-center group hover:shadow-lg transition-all bg-white relative">
-                <img src={product.imageUrl} alt={product.name} className="w-16 h-16 rounded-xl object-cover" />
-                <div className="flex-1">
-                  <h4 className="font-bold text-slate-800">{product.name}</h4>
-                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{product.category}</p>
-                  <p className="text-xs text-slate-400 font-bold">庫存: {product.stock} | 價格: {product.price}</p>
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                  <span className={`text-[10px] font-black px-2 py-1 rounded-lg ${product.stock > 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
-                    {product.stock > 0 ? 'ON SALE' : 'SOLD OUT'}
-                  </span>
+              <div key={product.id} className="border border-slate-100 rounded-[2rem] p-6 flex flex-col gap-4 group hover:shadow-xl transition-all bg-white relative">
+                <div className="flex gap-4 items-center">
+                  <img src={product.imageUrl} alt={product.name} className="w-20 h-20 rounded-2xl object-cover shadow-sm" />
+                  <div className="flex-1">
+                    <h4 className="font-black text-slate-800 text-lg">{product.name}</h4>
+                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{product.category}</p>
+                    <p className="text-indigo-600 font-black">{product.price} PTS</p>
+                  </div>
                   <button
                     onClick={() => handleDeleteProduct(product.id)}
-                    className="p-1.5 text-slate-300 hover:text-rose-500 transition-colors"
+                    className="p-2 text-slate-300 hover:text-rose-500 transition-colors"
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={18} />
                   </button>
+                </div>
+
+                <div className="flex items-center justify-between pt-4 border-t border-slate-50">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-1">庫存管理</span>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        defaultValue={product.stock}
+                        onBlur={(e) => handleUpdateStock(product.id, parseInt(e.target.value) || 0)}
+                        className="w-16 p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-black text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                      <span className={`text-[10px] font-black px-2 py-1 rounded-lg ${product.stock > 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+                        {product.stock > 0 ? 'ON SALE' : 'SOLD OUT'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
@@ -625,7 +650,57 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
         </div>
       )}
 
-      {/* 剩餘分頁邏輯保持不變，但適配 UI 風格 */}
+      {activeTab === 'mission_approval' && (
+        <div className="bg-white rounded-[3rem] p-12 border border-slate-100 shadow-xl animate-in slide-in-from-bottom-4">
+          <h2 className="text-3xl font-black text-slate-800 mb-8 flex items-center gap-3">
+            <CheckCircle className="text-emerald-600" />
+            任務提交審核
+            <span className="bg-emerald-100 text-emerald-600 text-sm px-3 py-1 rounded-full">{submissions.filter(s => s.status === 'pending').length} 待處裡</span>
+          </h2>
+
+          <div className="space-y-6">
+            {submissions.filter(s => s.status === 'pending').length === 0 ? (
+              <div className="text-center py-24 text-slate-400 font-bold bg-slate-50 rounded-[3rem] border border-slate-100 border-dashed">
+                目前沒有待審核的任務提交
+              </div>
+            ) : (
+              submissions.filter(s => s.status === 'pending').map(sub => (
+                <div key={sub.id} className="bg-slate-50 p-8 rounded-[2.5rem] border border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div className="flex items-center gap-6">
+                    <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center text-2xl font-black text-indigo-600 border border-slate-100">
+                      {sub.userName[0]}
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-black text-slate-800">{sub.userName}</h3>
+                      <p className="text-slate-500 font-bold flex items-center gap-2">
+                        提交了任務：<span className="text-indigo-600">「{sub.missionTitle}」</span>
+                      </p>
+                      <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-2">
+                        獎勵點數：{sub.points} PTS • 提交時間：{new Date(sub.timestamp).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-4">
+                    <button
+                      onClick={() => handleApproveMission(sub.id)}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-2xl font-black transition-all shadow-xl shadow-emerald-100 flex items-center gap-2"
+                    >
+                      <Check size={20} /> 核准發放
+                    </button>
+                    <button
+                      onClick={() => handleRejectMission(sub.id)}
+                      className="bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 px-8 py-3 rounded-2xl font-black transition-all border border-slate-200"
+                    >
+                      不予核准
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
       {activeTab === 'scan' && (
         <div className="bg-white rounded-[3rem] p-16 border border-slate-100 text-center shadow-xl animate-in fade-in">
           <div className="bg-indigo-50 w-32 h-32 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 text-indigo-600 shadow-inner">
@@ -835,6 +910,7 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
           </div>
         </div>
       )}
+
       {activeTab === 'wishes' && (
         <div className="bg-white rounded-[3rem] p-12 border border-slate-100 shadow-xl animate-in slide-in-from-bottom-4">
           <h2 className="text-3xl font-black text-slate-800 mb-8 flex items-center gap-3">
@@ -872,7 +948,6 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
         </div>
       )}
 
-      {/* 掃描對話框邏輯同前，但適配視覺 */}
       {isScanning && (
         <div className="fixed inset-0 z-[150] bg-slate-900/95 backdrop-blur-xl flex flex-col items-center justify-center p-8">
           <div className="relative w-full max-w-lg aspect-square border-8 border-white/5 rounded-[5rem] overflow-hidden shadow-[0_0_100px_rgba(79,70,229,0.3)]">
