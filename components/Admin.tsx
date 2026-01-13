@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { Camera, ShieldCheck, Check, Search, X, ScanLine, Gift, History as HistoryIcon, GraduationCap, Users, UserPlus, Package, Plus, Target } from 'lucide-react';
-import { Redemption, UserProfile, Product, UserRole, Mission } from '../types';
-import { updateRedemptionStatus, approveStudent, deleteStudent, addProduct, addMission, toggleMission, saveStudents, subscribeToStudents, subscribeToRedemptions, subscribeToProducts, subscribeToMissions } from '../utils/storage';
+import { Camera, ShieldCheck, Check, Search, X, ScanLine, Gift, History as HistoryIcon, GraduationCap, Users, UserPlus, Package, Plus, Target, Clock, Trash2, Heart } from 'lucide-react';
+import { Redemption, UserProfile, Product, UserRole, Mission, PointReason, Wish } from '../types';
+import { updateRedemptionStatus, approveStudent, deleteStudent, addProduct, addMission, toggleMission, saveStudents, subscribeToStudents, subscribeToRedemptions, subscribeToProducts, subscribeToMissions, deleteProduct, addPointReason, deletePointReason, subscribeToPointReasons, subscribeToWishes, deleteWish } from '../utils/storage';
 import { RANKS } from '../constants';
 
 interface AdminProps {
@@ -10,13 +10,15 @@ interface AdminProps {
 }
 
 const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
-  const [activeTab, setActiveTab] = useState<'roster' | 'scan' | 'points' | 'history' | 'approval' | 'products' | 'missions'>('roster');
+  const [activeTab, setActiveTab] = useState<'roster' | 'scan' | 'points' | 'history' | 'approval' | 'products' | 'missions' | 'wishes'>('roster');
   const [isScanning, setIsScanning] = useState(false);
   const [redemptions, setRedemptions] = useState<Redemption[]>([]);
   const [students, setStudents] = useState<UserProfile[]>([]);
   const [pendingStudents, setPendingStudents] = useState<UserProfile[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [missions, setMissions] = useState<Mission[]>([]);
+  const [pointReasons, setPointReasons] = useState<PointReason[]>([]);
+  const [wishes, setWishes] = useState<Wish[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [scanResult, setScanResult] = useState<Redemption | null>(null);
 
@@ -24,17 +26,21 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
   const [newMissionTitle, setNewMissionTitle] = useState('');
   const [newMissionPoints, setNewMissionPoints] = useState('');
   const [newMissionType, setNewMissionType] = useState<'normal' | 'challenge' | 'hard'>('normal');
+  const [newMissionDeadline, setNewMissionDeadline] = useState('');
   const [isAddingMission, setIsAddingMission] = useState(false);
 
   // 點數管理相關狀態
   const [targetStudentId, setTargetStudentId] = useState<string>('');
   const [pointAmount, setPointAmount] = useState<string>('100');
   const [reason, setReason] = useState('考試成績優異');
+  const [newReason, setNewReason] = useState('');
+  const [isAddingReason, setIsAddingReason] = useState(false);
 
   // 商品管理
   const [newProductName, setNewProductName] = useState('');
   const [newProductPrice, setNewProductPrice] = useState('');
   const [newProductStock, setNewProductStock] = useState('');
+  const [newProductCategory, setNewProductCategory] = useState<'food' | 'electronic' | 'ticket' | 'other'>('other');
   const [newProductImage, setNewProductImage] = useState('');
   const [isAddingProduct, setIsAddingProduct] = useState(false);
 
@@ -54,14 +60,18 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
     const unsubRedemptions = subscribeToRedemptions(setRedemptions);
     const unsubProducts = subscribeToProducts(setProducts);
     const unsubMissions = subscribeToMissions(setMissions);
+    const unsubReasons = subscribeToPointReasons(setPointReasons);
+    const unsubWishes = subscribeToWishes(setWishes);
 
     return () => {
       unsubStudents();
       unsubRedemptions();
       unsubProducts();
       unsubMissions();
+      unsubReasons();
+      unsubWishes();
     };
-  }, []);
+  }, [targetStudentId]);
 
   const handleStartScan = async () => {
     setIsScanning(true);
@@ -125,8 +135,8 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
       name: newProductName,
       price: parseInt(newProductPrice),
       stock: parseInt(newProductStock),
-      category: 'other',
-      description: '新上架商品',
+      category: newProductCategory,
+      description: `精選${newProductCategory === 'food' ? '美食' : newProductCategory === 'electronic' ? '電子產品' : newProductCategory === 'ticket' ? '門票' : '商品'}`,
       imageUrl: newProductImage || 'https://images.unsplash.com/photo-1553456558-aff63285bdd1?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'
     };
 
@@ -136,7 +146,14 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
     setNewProductPrice('');
     setNewProductStock('');
     setNewProductImage('');
+    setNewProductCategory('other');
     alert('商品上架成功！');
+  };
+
+  const handleDeleteProduct = async (id: string) => {
+    if (window.confirm('確定要刪除此商品嗎？')) {
+      await deleteProduct(id);
+    }
   };
 
   const handleAddMission = async (e: React.FormEvent) => {
@@ -149,8 +166,9 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
       description: '由導師新增的挑戰任務',
       points: parseInt(newMissionPoints),
       type: newMissionType,
-      isActive: true, // Default active
-      maxAttempts: 1
+      isActive: true,
+      maxAttempts: 1,
+      deadline: newMissionDeadline ? new Date(newMissionDeadline).getTime() : undefined
     };
 
     await addMission(newMission);
@@ -158,7 +176,28 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
     setNewMissionTitle('');
     setNewMissionPoints('');
     setNewMissionType('normal');
-    alert('任務新增成功！');
+    setNewMissionDeadline('');
+    alert('任務新增成功！運作正常。');
+  };
+
+  const handleDeleteWish = async (id: string) => {
+    if (window.confirm('確定要刪除此願望嗎？')) {
+      await deleteWish(id);
+    }
+  };
+
+  const handleAddReason = async () => {
+    if (!newReason) return;
+    await addPointReason({
+      id: `r_${Date.now()}`,
+      title: newReason
+    });
+    setNewReason('');
+    setIsAddingReason(false);
+  };
+
+  const handleDeleteReason = async (id: string) => {
+    await deletePointReason(id);
   };
 
   const handleToggleMission = async (id: string) => {
@@ -259,6 +298,17 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
         >
           <Target size={18} /> <span>任務</span>
         </button>
+        <button
+          onClick={() => setActiveTab('wishes')}
+          className={`flex items-center justify-center gap-3 py-4 px-6 rounded-2xl font-black transition-all whitespace-nowrap ${activeTab === 'wishes' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50 relative'}`}
+        >
+          <Heart size={18} /> <span>許願</span>
+          {wishes.length > 0 && (
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-pink-500 rounded-full text-white text-[10px] flex items-center justify-center border-2 border-white">
+              {wishes.length}
+            </span>
+          )}
+        </button>
       </div>
 
       {activeTab === 'roster' && (
@@ -342,20 +392,76 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
               </div>
 
               <div>
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">第二步：發放名目</label>
-                <select
-                  value={reason}
-                  onChange={e => setReason(e.target.value)}
-                  className="w-full p-5 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 transition-all outline-none font-bold text-slate-700 shadow-inner"
-                >
-                  <option>期中考試成績優異</option>
-                  <option>課堂專題報告表現亮眼</option>
-                  <option>作業提前完成並獲得 A++</option>
-                  <option>熱心助人、品格優秀</option>
-                  <option>數學周考 80 分以上</option>
-                  <option>國文段考 90 分以上</option>
-                  <option>特殊貢獻獎勵</option>
-                </select>
+                <div className="flex items-center justify-between mb-4">
+                  <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em]">第二步：發放名目</label>
+                  <button
+                    onClick={() => setIsAddingReason(!isAddingReason)}
+                    className="text-xs font-black text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                  >
+                    {isAddingReason ? <X size={14} /> : <Plus size={14} />}
+                    {isAddingReason ? '取消新增' : '管理名目'}
+                  </button>
+                </div>
+
+                {isAddingReason ? (
+                  <div className="bg-slate-50 p-6 rounded-2xl border-2 border-indigo-100 mb-4 animate-in zoom-in-95 duration-200">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="輸入新名目 (例: 認真打掃)"
+                        value={newReason}
+                        onChange={e => setNewReason(e.target.value)}
+                        className="flex-1 p-3 border-2 border-slate-200 rounded-xl focus:border-indigo-600 outline-none font-bold"
+                      />
+                      <button
+                        onClick={handleAddReason}
+                        className="bg-indigo-600 text-white p-3 rounded-xl hover:bg-indigo-700 shadow-md"
+                      >
+                        <Plus size={20} />
+                      </button>
+                    </div>
+                    <div className="mt-4 space-y-2 max-h-40 overflow-y-auto pr-2">
+                      {pointReasons.map(r => (
+                        <div key={r.id} className="flex items-center justify-between bg-white p-3 rounded-lg border border-slate-100">
+                          <span className="font-bold text-sm text-slate-700">{r.title}</span>
+                          <button onClick={() => handleDeleteReason(r.id)} className="text-rose-500 hover:text-rose-600">
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <select
+                    value={reason}
+                    onChange={e => setReason(e.target.value)}
+                    className="w-full p-5 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 transition-all outline-none font-bold text-slate-700 shadow-inner"
+                  >
+                    <option value="">請選擇發放名目...</option>
+                    {pointReasons.length > 0 ? (
+                      pointReasons.map(r => (
+                        <option key={r.id} value={r.title}>{r.title}</option>
+                      ))
+                    ) : (
+                      <>
+                        <option>期中考試成績優異</option>
+                        <option>課堂專題報告表現亮眼</option>
+                        <option>作業提前完成並獲得 A++</option>
+                        <option>熱心助人、品格優秀</option>
+                      </>
+                    )}
+                    <option value="other">其他自定義原因</option>
+                  </select>
+                )}
+                {reason === 'other' && !isAddingReason && (
+                  <input
+                    type="text"
+                    placeholder="請輸入發放原因..."
+                    value={reason === 'other' ? '' : reason}
+                    onChange={e => setReason(e.target.value)}
+                    className="w-full mt-4 p-5 bg-white border-2 border-indigo-200 rounded-2xl outline-none font-bold text-slate-700"
+                  />
+                )}
               </div>
             </div>
 
@@ -455,6 +561,16 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
                   onChange={e => setNewProductName(e.target.value)}
                   className="p-3 rounded-xl border border-slate-200 font-bold outline-none focus:ring-2 focus:ring-indigo-500"
                 />
+                <select
+                  value={newProductCategory}
+                  onChange={e => setNewProductCategory(e.target.value as any)}
+                  className="p-3 rounded-xl border border-slate-200 font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="food">美食</option>
+                  <option value="electronic">電子產品</option>
+                  <option value="ticket">門票</option>
+                  <option value="other">其他商品</option>
+                </select>
                 <input
                   placeholder="圖片連結 (可選)"
                   value={newProductImage}
@@ -485,16 +601,23 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {products.map((product) => (
-              <div key={product.id} className="border border-slate-100 rounded-2xl p-4 flex gap-4 items-center group hover:shadow-lg transition-all bg-white">
+              <div key={product.id} className="border border-slate-100 rounded-2xl p-4 flex gap-4 items-center group hover:shadow-lg transition-all bg-white relative">
                 <img src={product.imageUrl} alt={product.name} className="w-16 h-16 rounded-xl object-cover" />
                 <div className="flex-1">
                   <h4 className="font-bold text-slate-800">{product.name}</h4>
+                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{product.category}</p>
                   <p className="text-xs text-slate-400 font-bold">庫存: {product.stock} | 價格: {product.price}</p>
                 </div>
-                <div className="text-right">
-                  <span className={`text-xs font-black px-2 py-1 rounded-lg ${product.stock > 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
-                    {product.stock > 0 ? '販售中' : '缺貨'}
+                <div className="flex flex-col items-end gap-2">
+                  <span className={`text-[10px] font-black px-2 py-1 rounded-lg ${product.stock > 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+                    {product.stock > 0 ? 'ON SALE' : 'SOLD OUT'}
                   </span>
+                  <button
+                    onClick={() => handleDeleteProduct(product.id)}
+                    className="p-1.5 text-slate-300 hover:text-rose-500 transition-colors"
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               </div>
             ))}
@@ -638,6 +761,16 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
                   <option value="challenge">挑戰任務</option>
                   <option value="hard">困難任務</option>
                 </select>
+                <div className="flex items-center gap-2 p-3 bg-white rounded-xl border border-slate-200">
+                  <Clock size={18} className="text-slate-400" />
+                  <input
+                    type="datetime-local"
+                    value={newMissionDeadline}
+                    onChange={e => setNewMissionDeadline(e.target.value)}
+                    className="font-bold outline-none text-slate-600 w-full"
+                    placeholder="截止日期 (可選)"
+                  />
+                </div>
               </div>
               <div className="flex justify-end gap-3">
                 <button
@@ -679,6 +812,11 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
                     </h3>
                     <p className="text-slate-400 text-sm font-bold flex items-center gap-2">
                       <span className="text-indigo-500">{mission.points} PTS</span> • {mission.description}
+                      {mission.deadline && (
+                        <span className="flex items-center gap-1 text-amber-500 ml-2">
+                          <Clock size={14} /> {new Date(mission.deadline).toLocaleString()} 截止
+                        </span>
+                      )}
                     </p>
                   </div>
                 </div>
@@ -694,6 +832,42 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
                 </button>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+      {activeTab === 'wishes' && (
+        <div className="bg-white rounded-[3rem] p-12 border border-slate-100 shadow-xl animate-in slide-in-from-bottom-4">
+          <h2 className="text-3xl font-black text-slate-800 mb-8 flex items-center gap-3">
+            <Heart className="text-pink-500" /> 許願池管理
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {wishes.length === 0 ? (
+              <div className="col-span-full py-20 text-center text-slate-400 font-bold">目前還沒有人許願喔！</div>
+            ) : (
+              wishes.map(wish => (
+                <div key={wish.id} className="bg-slate-50 p-6 rounded-[2.5rem] border border-slate-100 relative group">
+                  <button
+                    onClick={() => handleDeleteWish(wish.id)}
+                    className="absolute top-4 right-4 p-2 bg-white rounded-full text-slate-300 hover:text-rose-500 hover:shadow-md transition-all opacity-0 group-hover:opacity-100"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                  <div className="flex items-center gap-4 mb-4">
+                    <img src={wish.userAvatar} className="w-12 h-12 rounded-full border-2 border-white shadow-sm" alt={wish.userName} />
+                    <div>
+                      <h4 className="font-black text-slate-800">{wish.userName}</h4>
+                      <p className="text-[10px] text-slate-400 font-bold">{new Date(wish.timestamp).toLocaleString()}</p>
+                    </div>
+                  </div>
+                  <h3 className="text-xl font-black text-slate-800 mb-2">想要：{wish.itemName}</h3>
+                  <p className="text-slate-500 text-sm mb-6 leading-relaxed italic">"{wish.description}"</p>
+                  <div className="flex items-center gap-2 text-pink-500 font-black text-sm">
+                    <Heart size={16} fill="currentColor" /> {wish.likedBy?.length || 0} 人集氣中
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}

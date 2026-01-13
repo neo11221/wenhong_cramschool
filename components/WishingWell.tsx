@@ -34,7 +34,7 @@ const WishingWell: React.FC<WishingWellProps> = ({ user }) => {
             itemName: itemName,
             description: description,
             timestamp: Date.now(),
-            likes: 0
+            likedBy: []
         };
 
         await addWish(newWish);
@@ -44,8 +44,10 @@ const WishingWell: React.FC<WishingWellProps> = ({ user }) => {
     };
 
     const handleLike = async (wishId: string) => {
-        await likeWish(wishId);
+        await likeWish(wishId, user.id);
     };
+
+    const hasWished = wishes.some(w => w.userId === user.id);
 
     return (
         <div className="space-y-8 pb-20">
@@ -58,11 +60,17 @@ const WishingWell: React.FC<WishingWellProps> = ({ user }) => {
                     <p className="text-slate-500 mt-1">想要什麼獎勵？大聲告訴導師吧！</p>
                 </div>
                 <button
-                    onClick={() => setIsAdding(true)}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-indigo-100 flex items-center gap-2 transition-all hover:scale-105"
+                    onClick={() => {
+                        if (hasWished) {
+                            alert('你已經許過願囉！每個學員限許一個願望。');
+                        } else {
+                            setIsAdding(true);
+                        }
+                    }}
+                    className={`px-6 py-3 rounded-2xl font-bold shadow-lg flex items-center gap-2 transition-all hover:scale-105 ${hasWished ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-indigo-600 text-white shadow-indigo-100 hover:bg-indigo-700'}`}
                 >
                     <Plus size={20} />
-                    <span>我要許願</span>
+                    <span>{hasWished ? '已許願' : '我要許願'}</span>
                 </button>
             </header>
 
@@ -87,12 +95,12 @@ const WishingWell: React.FC<WishingWellProps> = ({ user }) => {
                         <div className="flex items-center justify-between pt-4 border-t border-slate-50 z-10">
                             <button
                                 onClick={() => handleLike(wish.id)}
-                                className="flex items-center gap-2 text-slate-400 hover:text-pink-500 transition-colors group/like"
+                                className={`flex items-center gap-2 transition-colors group/like ${wish.likedBy?.includes(user.id) ? 'text-pink-500' : 'text-slate-400 hover:text-pink-500'}`}
                             >
-                                <div className="p-2 rounded-full hover:bg-pink-50 transition-colors">
-                                    <ThumbsUp size={18} className={wish.likes > 0 ? "fill-pink-500 text-pink-500" : ""} />
+                                <div className={`p-2 rounded-full transition-colors ${wish.likedBy?.includes(user.id) ? 'bg-pink-50' : 'hover:bg-pink-50'}`}>
+                                    <ThumbsUp size={18} className={wish.likedBy?.includes(user.id) ? "fill-pink-500" : ""} />
                                 </div>
-                                <span className="font-bold text-sm">{wish.likes} 集氣</span>
+                                <span className="font-bold text-sm">{wish.likedBy?.length || 0} 集氣</span>
                             </button>
                         </div>
                     </div>

@@ -12,7 +12,7 @@ import {
   Unsubscribe,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { UserProfile, Redemption, UserRole, Product, Wish, Mission, ChallengeHistory } from '../types';
+import { UserProfile, Redemption, UserRole, Product, Wish, Mission, ChallengeHistory, PointReason } from '../types';
 import { STORAGE_KEYS, PRODUCTS } from '../constants';
 
 // Collections
@@ -23,6 +23,7 @@ const COLLECTIONS = {
   WISHES: 'wishes',
   REDEMPTIONS: 'redemptions',
   CHALLENGE_HISTORY: 'challengeHistory',
+  POINT_REASONS: 'pointReasons',
 };
 
 const INITIAL_STUDENTS: UserProfile[] = [
@@ -418,6 +419,49 @@ export const updateProductStock = async (productId: string, quantity: number) =>
   }
 };
 
+export const deleteProduct = async (id: string) => {
+  try {
+    await deleteDoc(doc(db, COLLECTIONS.PRODUCTS, id));
+  } catch (error) {
+    console.error('Error deleting product:', error);
+  }
+};
+
+// --- Point Reasons Management ---
+
+export const getPointReasons = async (): Promise<PointReason[]> => {
+  try {
+    const querySnapshot = await getDocs(collection(db, COLLECTIONS.POINT_REASONS));
+    return querySnapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }) as PointReason);
+  } catch (error) {
+    console.error('Error fetching point reasons:', error);
+    return [];
+  }
+};
+
+export const addPointReason = async (reason: PointReason) => {
+  try {
+    await setDoc(doc(db, COLLECTIONS.POINT_REASONS, reason.id), reason);
+  } catch (error) {
+    console.error('Error adding point reason:', error);
+  }
+};
+
+export const deletePointReason = async (id: string) => {
+  try {
+    await deleteDoc(doc(db, COLLECTIONS.POINT_REASONS, id));
+  } catch (error) {
+    console.error('Error deleting point reason:', error);
+  }
+};
+
+export const subscribeToPointReasons = (callback: (reasons: PointReason[]) => void): Unsubscribe => {
+  return onSnapshot(collection(db, COLLECTIONS.POINT_REASONS), (snapshot) => {
+    const reasons = snapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }) as PointReason);
+    callback(reasons);
+  });
+};
+
 // --- Wishes Management ---
 
 export const getWishes = async (): Promise<Wish[]> => {
@@ -432,6 +476,13 @@ export const getWishes = async (): Promise<Wish[]> => {
 
 export const addWish = async (wish: Wish) => {
   try {
+    // Check if user already has a wish
+    const wishes = await getWishes();
+    const existingWish = wishes.find(w => w.userId === wish.userId);
+    if (existingWish) {
+      alert('每個人僅限許願一次喔！');
+      return;
+    }
     await setDoc(doc(db, COLLECTIONS.WISHES, wish.id), wish);
   } catch (error) {
     console.error('Error adding wish:', error);
@@ -439,13 +490,33 @@ export const addWish = async (wish: Wish) => {
   }
 };
 
-export const likeWish = async (wishId: string) => {
+export const deleteWish = async (id: string) => {
+  try {
+    await deleteDoc(doc(db, COLLECTIONS.WISHES, id));
+  } catch (error) {
+    console.error('Error deleting wish:', error);
+  }
+};
+
+export const likeWish = async (wishId: string, userId: string) => {
   try {
     const docRef = doc(db, COLLECTIONS.WISHES, wishId);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       const wish = docSnap.data() as Wish;
-      await updateDoc(docRef, { likes: wish.likes + 1 });
+      const likedBy = wish.likedBy || [];
+
+      // If already liked, remove like (toggle) - or strictly one time? 
+      // User said "each wish can only be liked once per person"
+      if (likedBy.includes(userId)) {
+        // Option A: alert and return
+        alert('你已經為這個願望集過氣囉！');
+        return;
+      }
+
+      await updateDoc(docRef, {
+        likedBy: [...likedBy, userId]
+      });
     }
   } catch (error) {
     console.error('Error liking wish:', error);

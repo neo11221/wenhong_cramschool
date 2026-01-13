@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { Trophy, TrendingUp, Sparkles, CheckCircle, ChevronRight, Medal, Flame, Star, Target } from 'lucide-react';
+import { Trophy, TrendingUp, Sparkles, CheckCircle, ChevronRight, Medal, Flame, Star, Target, Clock } from 'lucide-react';
 import { UserProfile, RankTitle, Mission } from '../types';
 import { RANKS } from '../constants';
 import { getEncouragement } from '../services/geminiService';
@@ -51,10 +51,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, rank, onUserUpdate }) => {
   const handleCompleteMission = async (mission: Mission) => {
     if (completingId) return;
 
-    // Check if already completed
-    const alreadyCompleted = await hasCompletedMission(user.id, mission.id);
-    if (alreadyCompleted) {
-      alert('此任務已經完成過了喔！');
+    // Check if expired
+    if (mission.deadline && mission.deadline < Date.now()) {
+      alert('此任務已截止，無法再提交。');
       return;
     }
 
@@ -221,6 +220,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, rank, onUserUpdate }) => {
                       </div>
                       <h3 className="text-2xl font-black text-slate-800 transition-colors">{mission.title}</h3>
                       <p className="text-slate-500 mt-2 leading-relaxed text-lg font-medium max-w-2xl">{mission.description}</p>
+                      {mission.deadline && (
+                        <div className={`mt-3 flex items-center gap-2 text-sm font-black ${mission.deadline < Date.now() ? 'text-rose-500' : 'text-amber-500'}`}>
+                          <Clock size={16} />
+                          {mission.deadline < Date.now() ? '任務已截止' : `截止於 ${new Date(mission.deadline).toLocaleString()}`}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -236,16 +241,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user, rank, onUserUpdate }) => {
                     </div>
                     <button
                       onClick={() => handleCompleteMission(mission)}
-                      disabled={completingId !== null || isCompleted}
+                      disabled={completingId !== null || isCompleted || (mission.deadline !== undefined && mission.deadline < Date.now())}
                       className={`px-10 py-5 rounded-2xl font-black transition-all flex items-center gap-3 shadow-xl ${isCompleted
                         ? 'bg-slate-200 text-slate-500 cursor-not-allowed shadow-none'
-                        : (mission.type === 'normal' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100' :
-                          mission.type === 'challenge' ? 'bg-orange-600 hover:bg-orange-700 shadow-orange-100' :
-                            'bg-rose-600 hover:bg-rose-700 shadow-rose-100')
+                        : (mission.deadline !== undefined && mission.deadline < Date.now())
+                          ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                          : (mission.type === 'normal' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100' :
+                            mission.type === 'challenge' ? 'bg-orange-600 hover:bg-orange-700 shadow-orange-100' :
+                              'bg-rose-600 hover:bg-rose-700 shadow-rose-100')
                         } text-white text-lg active:scale-95 disabled:active:scale-100`}
                     >
-                      {isCompleted ? '已完成' : completingId === mission.id ? '提交結果中...' : '提交任務結果'}
-                      {!isCompleted && <ChevronRight size={20} />}
+                      {isCompleted ? '已完成' : (mission.deadline !== undefined && mission.deadline < Date.now()) ? '已截止' : completingId === mission.id ? '提交結果中...' : '提交任務結果'}
+                      {!isCompleted && (!mission.deadline || mission.deadline >= Date.now()) && <ChevronRight size={20} />}
                     </button>
                   </div>
                 </div>

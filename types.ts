@@ -64,6 +64,7 @@ export interface Mission {
   type: 'normal' | 'challenge' | 'hard';
   isActive: boolean;
   maxAttempts: number; // Usually 1 for "once per user"
+  deadline?: number; // Unix timestamp for time-limited missions
 }
 
 export interface ChallengeHistory {
@@ -81,5 +82,10 @@ export interface Wish {
   itemName: string;
   description: string;
   timestamp: number;
-  likes: number;
+  likedBy: string[]; // Store IDs of users who liked this wish
+}
+
+export interface PointReason {
+  id: string;
+  title: string;
 }
