@@ -22,6 +22,7 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
   const [submissions, setSubmissions] = useState<MissionSubmission[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().substring(0, 7)); // YYYY-MM
+  const [scanInput, setScanInput] = useState('');
   const [scanResult, setScanResult] = useState<Redemption | null>(null);
 
   // New Mission States
@@ -78,16 +79,24 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
   }, [targetStudentId]);
 
   const handleStartScan = async () => {
+    if (!scanInput) {
+      alert('請先輸入或貼上 QR Code 代碼字串');
+      return;
+    }
+
     setIsScanning(true);
     setTimeout(() => {
-      const pending = redemptions.find(r => r.status === 'pending');
-      if (pending) {
-        setScanResult(pending);
+      // 改為根據輸入的代碼精確查找
+      const match = redemptions.find(r => r.qrCodeData === scanInput && r.status === 'pending');
+
+      if (match) {
+        setScanResult(match);
+        setScanInput(''); // 成功後清空輸入
       } else {
-        alert('未發現任何待處理的兌換項目');
+        alert('❌ 無效的兌換碼或該商品已核銷');
       }
       setIsScanning(false);
-    }, 2000);
+    }, 1500);
   };
 
   const handleConfirmRedemption = async (id: string) => {
@@ -714,13 +723,24 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
             <Camera size={56} />
           </div>
           <h2 className="text-3xl font-black text-slate-800 mb-4 tracking-tight">啟動兌換掃描器</h2>
-          <p className="text-slate-400 mb-12 font-medium max-w-md mx-auto leading-relaxed">請掃描學員手機顯示的兌換 QR Code，系統將即時比對資料庫並完成核銷動作。</p>
+          <p className="text-slate-400 mb-8 font-medium max-w-md mx-auto leading-relaxed">請掃描學員手機顯示的 QR Code 或手動輸入代碼進行核銷。</p>
+
+          <div className="max-w-md mx-auto mb-8">
+            <input
+              type="text"
+              placeholder="請輸入或貼上 QR Code 代碼 (例如: AUTH_WORKSHOP_...)"
+              value={scanInput}
+              onChange={(e) => setScanInput(e.target.value)}
+              className="w-full p-5 bg-slate-50 border-2 border-indigo-100 rounded-2xl focus:bg-white focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 transition-all outline-none font-mono text-xs text-slate-600 shadow-inner"
+            />
+          </div>
+
           <button
             onClick={handleStartScan}
             disabled={isScanning}
             className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white px-16 py-6 rounded-[2rem] font-black transition-all shadow-2xl shadow-indigo-200 inline-flex items-center justify-center gap-4 text-xl active:scale-95"
           >
-            {isScanning ? '正在啟動相機...' : '開始掃描條碼'}
+            {isScanning ? '正在比對資料庫...' : '確認代碼並核銷'}
           </button>
         </div>
       )}
