@@ -361,6 +361,26 @@ export const hasCompletedMission = async (
 
 export const submitMission = async (submission: MissionSubmission) => {
   try {
+    // 額外檢查是否已提交過或已完成
+    const isCompleted = await hasCompletedMission(submission.userId, submission.missionId);
+    if (isCompleted) {
+      console.warn('Mission already completed');
+      return;
+    }
+
+    const querySnapshot = await getDocs(
+      query(collection(db, COLLECTIONS.MISSION_SUBMISSIONS))
+    );
+    const existingPending = querySnapshot.docs.find(d => {
+      const data = d.data();
+      return data.userId === submission.userId && data.missionId === submission.missionId && data.status === 'pending';
+    });
+
+    if (existingPending) {
+      console.warn('Mission submission already pending');
+      return;
+    }
+
     await setDoc(doc(db, COLLECTIONS.MISSION_SUBMISSIONS, submission.id), submission);
   } catch (error) {
     console.error('Error submitting mission:', error);

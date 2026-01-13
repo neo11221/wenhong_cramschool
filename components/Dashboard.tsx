@@ -32,12 +32,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, rank, onUserUpdate }) => {
     fetchContent();
 
     // Subscribe to real-time missions updates
-    const unsubscribe = subscribeToMissions(async (allMissions) => {
+    const unsubscribeMissions = subscribeToMissions(async (allMissions) => {
       // Filter only active missions
       const activeMissions = allMissions.filter(m => m.isActive);
       setMissions(activeMissions);
 
-      // Check completion status for all active missions
+      // Check completion status for all active missions from HISTORY
       const statusSet = new Set<string>();
       for (const m of activeMissions) {
         const isCompleted = await hasCompletedMission(user.id, m.id);
@@ -51,7 +51,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, rank, onUserUpdate }) => {
     });
 
     return () => {
-      unsubscribe();
+      unsubscribeMissions();
       unsubscribeSubmissions();
     };
   }, [user.id, rank]);
@@ -243,18 +243,33 @@ const Dashboard: React.FC<DashboardProps> = ({ user, rank, onUserUpdate }) => {
                     </div>
                     <button
                       onClick={() => handleCompleteMission(mission)}
-                      disabled={completingId !== null || isCompleted || (mission.deadline !== undefined && mission.deadline < Date.now())}
+                      disabled={
+                        completingId !== null ||
+                        isCompleted ||
+                        submissions.some(s => s.missionId === mission.id && s.status === 'pending') ||
+                        (mission.deadline !== undefined && mission.deadline < Date.now())
+                      }
                       className={`px-10 py-5 rounded-2xl font-black transition-all flex items-center gap-3 shadow-xl ${isCompleted
-                        ? 'bg-slate-200 text-slate-500 cursor-not-allowed shadow-none'
-                        : (mission.deadline !== undefined && mission.deadline < Date.now())
-                          ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
-                          : (mission.type === 'normal' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100' :
-                            mission.type === 'challenge' ? 'bg-orange-600 hover:bg-orange-700 shadow-orange-100' :
-                              'bg-rose-600 hover:bg-rose-700 shadow-rose-100')
+                          ? 'bg-slate-200 text-slate-500 cursor-not-allowed shadow-none'
+                          : submissions.some(s => s.missionId === mission.id && s.status === 'pending')
+                            ? 'bg-amber-100 text-amber-600 cursor-not-allowed shadow-none'
+                            : (mission.deadline !== undefined && mission.deadline < Date.now())
+                              ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                              : (mission.type === 'normal' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100' :
+                                mission.type === 'challenge' ? 'bg-orange-600 hover:bg-orange-700 shadow-orange-100' :
+                                  'bg-rose-600 hover:bg-rose-700 shadow-rose-100')
                         } text-white text-lg active:scale-95 disabled:active:scale-100`}
                     >
-                      {isCompleted ? '已完成' : (mission.deadline !== undefined && mission.deadline < Date.now()) ? '已截止' : completingId === mission.id ? '提交結果中...' : '提交任務結果'}
-                      {!isCompleted && (!mission.deadline || mission.deadline >= Date.now()) && <ChevronRight size={20} />}
+                      {isCompleted
+                        ? '已完成'
+                        : submissions.some(s => s.missionId === mission.id && s.status === 'pending')
+                          ? '審核中'
+                          : (mission.deadline !== undefined && mission.deadline < Date.now())
+                            ? '已截止'
+                            : completingId === mission.id
+                              ? '提交結果中...'
+                              : '提交任務結果'}
+                      {!isCompleted && !submissions.some(s => s.missionId === mission.id && s.status === 'pending') && (!mission.deadline || mission.deadline >= Date.now()) && <ChevronRight size={20} />}
                     </button>
                   </div>
                 </div>
