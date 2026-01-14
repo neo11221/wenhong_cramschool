@@ -12,7 +12,6 @@ import {
   Trophy,
   Zap,
   UserCircle,
-  UserCircle,
   Sparkles,
   Settings as SettingsIcon,
 } from 'lucide-react';
@@ -87,17 +86,22 @@ const Navigation = ({ user, currentRank, onSwitchUser }: { user: UserProfile, cu
             </div>
           </div>
         </div>
-      </button>
-      <Link
-        to="/settings"
-        onClick={onSwitchUser}
-        className="flex items-center gap-2 text-slate-400 hover:text-slate-600 transition-colors text-xs font-bold w-full p-2 justify-center"
-      >
-        <SettingsIcon size={14} />
-        <span>個人設定</span>
-      </Link>
-    </div>
-    </nav >
+        <button
+          onClick={onSwitchUser}
+          className="flex items-center gap-2 text-indigo-600 hover:text-indigo-800 transition-colors text-xs font-bold w-full bg-indigo-50 p-2 rounded-lg justify-center mb-2"
+        >
+          <LogOut size={14} />
+          <span>登出系統</span>
+        </button>
+        <Link
+          to="/settings"
+          className="flex items-center gap-2 text-slate-400 hover:text-slate-600 transition-colors text-xs font-bold w-full p-2 justify-center"
+        >
+          <SettingsIcon size={14} />
+          <span>個人設定</span>
+        </Link>
+      </div>
+    </nav>
   );
 };
 
@@ -137,8 +141,6 @@ const App: React.FC = () => {
                   <Route path="/" element={<Dashboard user={user} rank={currentRank} onUserUpdate={refreshUser} />} />
                   <Route path="/shop" element={<Shop user={user} onUserUpdate={refreshUser} />} />
                   <Route path="/wishes" element={<WishingWell user={user} />} />
-                  <Route path="/history" element={<Redemptions user={user} />} />
-                  <Route path="/admin" element={<Admin onRefresh={refreshUser} />} />
                   <Route path="/history" element={<Redemptions user={user} />} />
                   <Route path="/admin" element={<Admin onRefresh={refreshUser} />} />
                   <Route path="/settings" element={<Settings user={user} onUserUpdate={refreshUser} />} />
