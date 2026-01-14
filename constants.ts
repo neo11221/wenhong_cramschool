@@ -17,7 +17,7 @@ export const PRODUCTS: Product[] = [
     category: 'food',
     price: 80,
     description: '全台連鎖手搖飲中杯珍奶兌換券一張。',
-    imageUrl: 'https://images.unsplash.com/photo-1544467316-e97029d2d47b?q=80&w=400&h=300&auto=format&fit=crop',
+    imageUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTd073NRJm_EnCeDAQmJCtozQj3hVaKtDXggA&s',
     stock: 45
   },
   {

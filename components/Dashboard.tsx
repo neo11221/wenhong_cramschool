@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { Trophy, TrendingUp, Sparkles, CheckCircle, ChevronRight, Medal, Flame, Star, Target, Clock } from 'lucide-react';
+import { Trophy, TrendingUp, Sparkles, CheckCircle, ChevronRight, Medal, Flame, Star, Target, Clock, Info, X } from 'lucide-react';
 import { UserProfile, RankTitle, Mission, MissionSubmission } from '../types';
 import { RANKS } from '../constants';
 import { getEncouragement } from '../services/geminiService';
@@ -20,6 +20,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, rank, onUserUpdate }) => {
   const [submissions, setSubmissions] = useState<MissionSubmission[]>([]);
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [completedMissionIds, setCompletedMissionIds] = useState<Set<string>>(new Set());
+  const [showRankGuide, setShowRankGuide] = useState(false);
 
   const nextRank = RANKS[RANKS.indexOf(rank) + 1] || null;
   const progress = nextRank
@@ -99,7 +100,50 @@ const Dashboard: React.FC<DashboardProps> = ({ user, rank, onUserUpdate }) => {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-10">
+    <div className="space-y-8 animate-in fade-in duration-500 pb-10 relative">
+      {/* Rank Guide Modal */}
+      {showRankGuide && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-[2.5rem] max-w-lg w-full p-8 shadow-2xl animate-in zoom-in-95 duration-200 border border-slate-100 relative">
+            <button
+              onClick={() => setShowRankGuide(false)}
+              className="absolute top-6 right-6 p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors text-slate-500"
+            >
+              <X size={20} />
+            </button>
+
+            <h3 className="text-2xl font-black text-slate-800 mb-6 flex items-center gap-3">
+              <Trophy className="text-amber-500" />
+              等級制度說明
+            </h3>
+
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+              {RANKS.map((r, index) => (
+                <div
+                  key={r.name}
+                  className={`flex items-center gap-4 p-4 rounded-2xl ${user.totalEarned >= r.threshold ? 'bg-indigo-50 border-2 border-indigo-100' : 'bg-slate-50 border border-slate-100 grayscale opacity-70'}`}
+                >
+                  <div className="text-3xl">{r.icon}</div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-slate-800">{r.name}</h4>
+                    <p className="text-xs text-slate-500 font-bold mt-0.5">累計獲得 {r.threshold.toLocaleString()} 點</p>
+                  </div>
+                  {user.totalEarned >= r.threshold && (
+                    <div className="bg-indigo-500 text-white p-1 rounded-full">
+                      <CheckCircle size={16} />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 text-center">
+              <p className="text-xs text-slate-400 font-bold">持續完成任務，解鎖更多帥氣稱號！</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="flex flex-col md:flex-row md:items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-slate-800 tracking-tight">哈囉，{user.name}！</h1>
@@ -121,7 +165,16 @@ const Dashboard: React.FC<DashboardProps> = ({ user, rank, onUserUpdate }) => {
         <div className="md:col-span-2 bg-white rounded-[2.5rem] p-10 border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden">
           <div className="flex items-center justify-between mb-12">
             <div>
-              <h3 className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-2">當前成就階級</h3>
+              <div className="flex items-center gap-2 mb-2">
+                <h3 className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">當前成就階級</h3>
+                <button
+                  onClick={() => setShowRankGuide(true)}
+                  className="text-indigo-400 hover:text-indigo-600 transition-colors"
+                  title="查看等級說明"
+                >
+                  <Info size={14} />
+                </button>
+              </div>
               <div className="flex items-center gap-4">
                 <span className="text-4xl filter drop-shadow-md">{rank.icon}</span>
                 <span className={`text-2xl font-black px-6 py-2 rounded-2xl text-white ${rank.color} shadow-xl shadow-indigo-100 border-2 border-white/20`}>

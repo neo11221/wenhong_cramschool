@@ -146,7 +146,7 @@ export const registerStudent = async (
       points: 0,
       totalEarned: 0,
       role: UserRole.STUDENT,
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`,
+      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}&mouth=smile`,
       isApproved: false,
     };
 

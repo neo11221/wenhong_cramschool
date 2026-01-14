@@ -22,7 +22,7 @@ export const getEncouragement = async (profile: UserProfile, currentTitle: RankT
         - 目前剩餘點數：${profile.points}
         - 累計獲得點數：${profile.totalEarned}
 
-        請寫一段簡短（30-50字）的鼓勵話語，讚美他的成就並鼓勵他繼續學習或去商城兌換獎勵。
+        請寫一段簡短（30-50字）的鼓勵話語，讚美他的成就並引用金句鼓勵他繼續學習或去商城兌換獎勵。
         請使用親切的語氣。
       `,
     });
