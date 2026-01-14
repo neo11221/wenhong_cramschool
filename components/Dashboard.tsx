@@ -27,6 +27,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, rank, onUserUpdate }) => {
     ? Math.min(100, ((user.totalEarned - rank.threshold) / (nextRank.threshold - rank.threshold)) * 100)
     : 100;
 
+  const currentLevel = Math.floor(user.totalEarned / 500) + 1;
+
   useEffect(() => {
     const fetchContent = async () => {
       const msg = await getEncouragement(user, rank);
@@ -177,8 +179,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, rank, onUserUpdate }) => {
               </div>
               <div className="flex items-center gap-4">
                 <span className="text-4xl filter drop-shadow-md">{rank.icon}</span>
-                <span className={`text-2xl font-black px-6 py-2 rounded-2xl text-white ${rank.color} shadow-xl shadow-indigo-100 border-2 border-white/20`}>
-                  {rank.name}
+                <span className={`text-2xl font-black px-6 py-2 rounded-2xl text-white ${rank.color} shadow-xl shadow-indigo-100 border-2 border-white/20 flex items-center gap-2`}>
+                  {rank.name} <span className="text-sm bg-white/20 px-2 py-0.5 rounded-lg border border-white/20">Lv.{currentLevel}</span>
                 </span>
               </div>
             </div>

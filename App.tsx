@@ -82,7 +82,7 @@ const Navigation = ({ user, currentRank, onSwitchUser }: { user: UserProfile, cu
           <div className="overflow-hidden">
             <p className="font-bold text-slate-800 truncate text-sm">{user.name}</p>
             <div className={`text-[9px] px-2 py-0.5 rounded-full inline-block text-white font-black ${currentRank.color}`}>
-              {currentRank.icon} {currentRank.name}
+              {currentRank.icon} {currentRank.name} Lv.{Math.floor(user.totalEarned / 500) + 1}
             </div>
           </div>
         </div>

@@ -100,7 +100,12 @@ const Settings: React.FC<SettingsProps> = ({ user, onUserUpdate }) => {
 
                     <div className="text-center">
                         <h2 className="text-2xl font-black text-slate-800">{user.name}</h2>
-                        <p className="text-slate-400 font-bold mt-1 text-sm uppercase tracking-wider">{user.role === 'ADMIN' ? '管理員' : '學員'}</p>
+                        <div className="flex items-center justify-center gap-2 mt-1">
+                            <span className="text-slate-400 font-bold text-sm uppercase tracking-wider">{user.role === 'ADMIN' ? '管理員' : '學員'}</span>
+                            <span className="px-2 py-0.5 rounded-lg bg-indigo-100 text-indigo-700 text-xs font-black">
+                                Lv.{Math.floor(user.totalEarned / 500) + 1}
+                            </span>
+                        </div>
                     </div>
 
                     <div className="w-full max-w-sm space-y-4 pt-6 mt-6 border-t border-slate-50">
