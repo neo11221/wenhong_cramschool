@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Camera, ShieldCheck, Check, Search, X, ScanLine, Gift, History as HistoryIcon, GraduationCap, Users, UserPlus, Package, Plus, Target, Clock, Trash2, Heart, CheckCircle } from 'lucide-react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import { Html5Qrcode } from 'html5-qrcode';
 import { Redemption, UserProfile, Product, UserRole, Mission, PointReason, Wish, MissionSubmission, ProductCategory } from '../types';
 import { updateRedemptionStatus, approveStudent, deleteStudent, addProduct, addMission, toggleMission, saveStudents, subscribeToStudents, subscribeToRedemptions, subscribeToProducts, subscribeToMissions, deleteProduct, addPointReason, deletePointReason, subscribeToPointReasons, subscribeToWishes, deleteWish, subscribeToMissionSubmissions, approveMission, rejectMission, updateProductStock, subscribeToProductCategories, addProductCategory, deleteProductCategory } from '../utils/storage';
 import { RANKS } from '../constants';
@@ -97,35 +97,39 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
   }, [targetStudentId, newProductCategory]);
 
   useEffect(() => {
-    let scanner: Html5QrcodeScanner | null = null;
+    let html5QrCode: Html5Qrcode | null = null;
 
-    if (activeTab === 'scan') {
-      scanner = new Html5QrcodeScanner(
-        'reader',
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
-          aspectRatio: 1.0
-        },
-        false
-      );
+    const startScanner = async () => {
+      if (activeTab === 'scan') {
+        try {
+          html5QrCode = new Html5Qrcode("reader");
+          await html5QrCode.start(
+            { facingMode: "environment" },
+            {
+              fps: 10,
+              qrbox: { width: 250, height: 250 },
+              aspectRatio: 1.0
+            },
+            (decodedText) => {
+              if (decodedText) {
+                handleAutoVerify(decodedText);
+              }
+            },
+            () => { }
+          );
+        } catch (err) {
+          console.error("Unable to start scanner", err);
+        }
+      }
+    };
 
-      scanner.render(
-        (decodedText) => {
-          if (decodedText) {
-            // 自動觸發比對邏輯
-            handleAutoVerify(decodedText);
-          }
-        },
-        () => { }
-      );
-    }
+    startScanner();
 
     return () => {
-      if (scanner) {
-        scanner.clear().catch(error => {
-          console.error("Failed to clear scanner", error);
-        });
+      if (html5QrCode && html5QrCode.isScanning) {
+        html5QrCode.stop().then(() => {
+          html5QrCode?.clear();
+        }).catch(err => console.error("Failed to stop scanner", err));
       }
     };
   }, [activeTab]);
