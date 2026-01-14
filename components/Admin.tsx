@@ -481,17 +481,26 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
                     </div>
                   </div>
                 </div>
-                <div className="mt-8 pt-6 border-t border-slate-50 flex justify-between items-center">
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter">ID: {student.id.replace('user_', '')}</span>
-                  <button
-                    onClick={() => {
-                      setTargetStudentId(student.id);
-                      setActiveTab('points');
-                    }}
-                    className="text-indigo-600 font-black text-xs hover:underline flex items-center gap-1"
-                  >
-                    <Gift size={14} /> 發放點數
-                  </button>
+                <div className="mt-8 pt-6 border-t border-slate-50 flex justify-between items-center gap-4">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter truncate max-w-[80px]">ID: {student.id.replace('user_', '')}</span>
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={() => {
+                        setTargetStudentId(student.id);
+                        setActiveTab('points');
+                      }}
+                      className="text-indigo-600 font-black text-xs hover:underline flex items-center gap-1"
+                    >
+                      <Gift size={14} /> 點數
+                    </button>
+                    <button
+                      onClick={() => handleDelete(student.id)}
+                      className="text-slate-300 hover:text-rose-500 transition-colors"
+                      title="刪除帳號"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
               </div>
             );

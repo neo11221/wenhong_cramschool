@@ -3,6 +3,10 @@ import { Heart, Plus, Sparkles, Send, X, ThumbsUp } from 'lucide-react';
 import { UserProfile, Wish } from '../types';
 import { subscribeToWishes, addWish, likeWish } from '../utils/storage';
 import { useAlert } from './AlertProvider';
+import { Clock } from 'lucide-react';
+
+const COOLDOWN_DAYS = 30;
+const COOLDOWN_MS = COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
 
 interface WishingWellProps {
     user: UserProfile;
@@ -14,6 +18,10 @@ const WishingWell: React.FC<WishingWellProps> = ({ user }) => {
     const [isAdding, setIsAdding] = useState(false);
     const [itemName, setItemName] = useState('');
     const [description, setDescription] = useState('');
+    const [timeLeft, setTimeLeft] = useState<{ d: number, h: number, m: number, s: number } | null>(null);
+
+    const userLastWish = wishes.filter(w => w.userId === user.id).sort((a, b) => b.timestamp - a.timestamp)[0];
+    const isOnCooldown = userLastWish && (Date.now() - userLastWish.timestamp < COOLDOWN_MS);
 
     useEffect(() => {
         // Subscribe to real-time wishes updates
@@ -23,6 +31,30 @@ const WishingWell: React.FC<WishingWellProps> = ({ user }) => {
 
         return () => unsubscribe();
     }, []);
+
+    useEffect(() => {
+        const calculateTimeLeft = () => {
+            if (!userLastWish) return null;
+
+            const diff = (userLastWish.timestamp + COOLDOWN_MS) - Date.now();
+            if (diff <= 0) return null;
+
+            return {
+                d: Math.floor(diff / (1000 * 60 * 60 * 24)),
+                h: Math.floor((diff / (1000 * 60 * 60)) % 24),
+                m: Math.floor((diff / 1000 / 60) % 60),
+                s: Math.floor((diff / 1000) % 60)
+            };
+        };
+
+        const timer = setInterval(() => {
+            setTimeLeft(calculateTimeLeft());
+        }, 1000);
+
+        setTimeLeft(calculateTimeLeft());
+
+        return () => clearInterval(timer);
+    }, [userLastWish]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -54,7 +86,7 @@ const WishingWell: React.FC<WishingWellProps> = ({ user }) => {
         await likeWish(wishId, user.id);
     };
 
-    const hasWished = wishes.some(w => w.userId === user.id);
+
 
     return (
         <div className="space-y-8 pb-20">
@@ -68,16 +100,23 @@ const WishingWell: React.FC<WishingWellProps> = ({ user }) => {
                 </div>
                 <button
                     onClick={() => {
-                        if (hasWished) {
-                            showAlert('你已經許過願囉！每個學員限許一個願望。', 'info');
+                        if (isOnCooldown) {
+                            showAlert(`冷卻中！請等待倒數結束再許下下個願望。`, 'info');
                         } else {
                             setIsAdding(true);
                         }
                     }}
-                    className={`px-6 py-3 rounded-2xl font-bold shadow-lg flex items-center gap-2 transition-all hover:scale-105 ${hasWished ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-indigo-600 text-white shadow-indigo-100 hover:bg-indigo-700'}`}
+                    className={`px-6 py-3 rounded-2xl font-black shadow-lg flex flex-col items-center gap-1 transition-all hover:scale-105 min-w-[200px] ${isOnCooldown ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200' : 'bg-indigo-600 text-white shadow-indigo-100 hover:bg-indigo-700'}`}
                 >
-                    <Plus size={20} />
-                    <span>{hasWished ? '已許願' : '我要許願'}</span>
+                    <div className="flex items-center gap-2">
+                        {isOnCooldown ? <Clock size={18} /> : <Plus size={20} />}
+                        <span>{isOnCooldown ? '冷卻中' : '我要許願'}</span>
+                    </div>
+                    {isOnCooldown && timeLeft && (
+                        <span className="text-[10px] font-bold font-mono tracking-tight">
+                            {timeLeft.d}天 {timeLeft.h}時 {timeLeft.m}分 {timeLeft.s}秒
+                        </span>
+                    )}
                 </button>
             </header>
 
