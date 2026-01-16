@@ -76,3 +76,16 @@ export const STORAGE_KEYS = {
 export const GRADES = [
   '小五', '小六', '國一', '國二', '國三', '高一', '高二', '高三'
 ];
+
+export const QUOTES = [
+  { text: "學習不是填充桶子，而是點燃火焰。", author: "葉慈 (William Butler Yeats)" },
+  { text: "成功不是終點，失敗也不是終焉：唯有持續前行的勇氣才是真諦。", author: "邱吉爾 (Winston Churchill)" },
+  { text: "如果你停止學習，你就會開始老去，不論你是 20 歲還是 80 歲。", author: "亨利·福特 (Henry Ford)" },
+  { text: "教育是用來改變世界最強大的武器。", author: "納爾遜·曼德拉 (Nelson Mandela)" },
+  { text: "你的時間有限，不要浪費時間活在別人的生活裡。", author: "史蒂夫·賈伯斯 (Steve Jobs)" },
+  { text: "路漫漫其修遠兮，吾將上下而求索。", author: "屈原" },
+  { text: "書山有路勤為徑，學海無涯苦作舟。", author: "韓愈" },
+  { text: "卓越不是一個行為，而是一個習慣。", author: "亞里斯多德 (Aristotle)" },
+  { text: "天才是百分之一的靈感加上百分之九十九的汗水。", author: "愛迪生 (Thomas Edison)" },
+  { text: "行動是所有成功的基礎關鍵。", author: "畢卡索 (Pablo Picasso)" }
+];

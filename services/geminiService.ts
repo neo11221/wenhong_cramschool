@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { UserProfile, RankTitle } from "../types";
+import { QUOTES } from "../constants";
 
 const getAIClient = () => {
   const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
@@ -8,9 +9,13 @@ const getAIClient = () => {
 };
 
 export const getEncouragement = async (profile: UserProfile, currentTitle: RankTitle) => {
+  // Fallback: Pick a random quote
+  const randomQuote = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+  const fallbackMsg = `「${randomQuote.text}」—— ${randomQuote.author}`;
+
   try {
     const ai = getAIClient();
-    if (!ai) throw new Error("API Key not found");
+    if (!ai) return fallbackMsg;
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.0-flash-exp',
@@ -22,14 +27,17 @@ export const getEncouragement = async (profile: UserProfile, currentTitle: RankT
         - 目前剩餘點數：${profile.points}
         - 累計獲得點數：${profile.totalEarned}
 
-        請寫一段簡短（30-50字）的鼓勵話語，讚美他的成就並引用金句鼓勵他繼續學習或去商城兌換獎勵。
-        請使用親切的語氣。
+        參考名言庫（你可以從中挑選一個合適的，或是自己提供一個類似水準的）：
+        ${QUOTES.map(q => `「${q.text}」-- ${q.author}`).join('\n')}
+
+        請寫一段簡短（30-60字）的鼓勵話語，讚美他的成就並「引用一段名言」（一定要包含名言與作者）來鼓勵他。
+        請使用親切、像大哥哥大姊姊一樣的語氣。
       `,
     });
-    return response.text() || "繼續努力，學習的路上你並不孤單！";
+    return response.text() || fallbackMsg;
   } catch (error) {
     console.error("Gemini Error:", error);
-    return "保持學習的熱情，你是最棒的！";
+    return fallbackMsg;
   }
 };
 
