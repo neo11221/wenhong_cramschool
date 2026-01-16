@@ -54,7 +54,7 @@ const Settings: React.FC<SettingsProps> = ({ user, onUserUpdate }) => {
         if (!confirm('確定要換回原本的可愛頭貼嗎？')) return;
 
         try {
-            const defaultAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}&mouth=smile`;
+            const defaultAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}&mouth=smile&eyebrows=defaultNatural&eyes=default`;
             const updatedUser = { ...user, avatar: defaultAvatar };
             await saveUser(updatedUser);
             onUserUpdate();
