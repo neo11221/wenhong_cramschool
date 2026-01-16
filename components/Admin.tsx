@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
-import { Camera, ShieldCheck, Check, Search, X, ScanLine, Gift, History as HistoryIcon, GraduationCap, Users, UserPlus, Package, Plus, Target, Clock, Trash2, Heart, CheckCircle } from 'lucide-react';
+import { Camera, ShieldCheck, Check, Search, X, ScanLine, Gift, History as HistoryIcon, GraduationCap, Users, UserPlus, Package, Plus, Target, Clock, Trash2, Heart, CheckCircle, Image as ImageIcon } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
-import { Redemption, UserProfile, Product, UserRole, Mission, PointReason, Wish, MissionSubmission, ProductCategory } from '../types';
-import { updateRedemptionStatus, approveStudent, deleteStudent, addProduct, addMission, toggleMission, saveStudents, subscribeToStudents, subscribeToRedemptions, subscribeToProducts, subscribeToMissions, deleteProduct, addPointReason, deletePointReason, subscribeToPointReasons, subscribeToWishes, deleteWish, subscribeToMissionSubmissions, approveMission, rejectMission, updateProductStock, subscribeToProductCategories, addProductCategory, deleteProductCategory, saveStudent } from '../utils/storage';
+import { Redemption, UserProfile, Product, UserRole, Mission, PointReason, Wish, MissionSubmission, ProductCategory, Banner } from '../types';
+import { updateRedemptionStatus, approveStudent, deleteStudent, addProduct, addMission, toggleMission, saveStudents, subscribeToStudents, subscribeToRedemptions, subscribeToProducts, subscribeToMissions, deleteProduct, addPointReason, deletePointReason, subscribeToPointReasons, subscribeToWishes, deleteWish, subscribeToMissionSubmissions, approveMission, rejectMission, updateProductStock, subscribeToProductCategories, addProductCategory, deleteProductCategory, saveStudent, addBanner, deleteBanner, subscribeToBanners } from '../utils/storage';
 import { useAlert } from './AlertProvider';
 import { RANKS, GRADES } from '../constants';
 
@@ -13,7 +13,7 @@ interface AdminProps {
 
 const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
   const { showAlert } = useAlert();
-  const [activeTab, setActiveTab] = useState<'roster' | 'scan' | 'points' | 'history' | 'approval' | 'products' | 'missions' | 'wishes' | 'mission_approval'>('roster');
+  const [activeTab, setActiveTab] = useState<'roster' | 'scan' | 'points' | 'history' | 'approval' | 'products' | 'missions' | 'wishes' | 'mission_approval' | 'banners'>('roster');
   const [isScanning, setIsScanning] = useState(false);
   const [redemptions, setRedemptions] = useState<Redemption[]>([]);
   const [students, setStudents] = useState<UserProfile[]>([]);
@@ -26,6 +26,7 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().substring(0, 7)); // YYYY-MM
   const [categories, setCategories] = useState<ProductCategory[]>([]);
+  const [banners, setBanners] = useState<Banner[]>([]);
   const [scanInput, setScanInput] = useState('');
   const [scanResult, setScanResult] = useState<Redemption | null>(null);
   const redemptionsRef = React.useRef(redemptions);
@@ -54,7 +55,12 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
   const [newProductStock, setNewProductStock] = useState('');
   const [newProductCategory, setNewProductCategory] = useState<string>('');
   const [newProductImage, setNewProductImage] = useState('');
+  const [newProductDescription, setNewProductDescription] = useState('');
   const [isAddingProduct, setIsAddingProduct] = useState(false);
+
+  // 廣告橫幅管理
+  const [newBannerImage, setNewBannerImage] = useState('');
+  const [isAddingBanner, setIsAddingBanner] = useState(false);
 
   // 分類管理
   const [newCatName, setNewCatName] = useState('');
@@ -86,6 +92,8 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
       }
     });
 
+    const unsubBanners = subscribeToBanners(setBanners);
+
     return () => {
       unsubStudents();
       unsubRedemptions();
@@ -95,6 +103,7 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
       unsubWishes();
       unsubSubmissions();
       unsubCategories();
+      unsubBanners();
     };
   }, [targetStudentId, newProductCategory]);
 
@@ -241,7 +250,7 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
         name: newProductName,
         category: newProductCategory,
         price: parseInt(newProductPrice),
-        description: `精選${newProductCategory === 'food' ? '美食' : newProductCategory === 'electronic' ? '電子產品' : newProductCategory === 'ticket' ? '門票' : '商品'}`,
+        description: newProductDescription || `精選${newProductCategory === 'food' ? '美食' : newProductCategory === 'electronic' ? '電子產品' : newProductCategory === 'ticket' ? '門票' : '商品'}`,
         imageUrl: newProductImage || 'https://images.unsplash.com/photo-1553456558-aff63285bdd1?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
         stock: parseInt(newProductStock) || 99
       };
@@ -252,6 +261,7 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
       setNewProductStock('');
       setNewProductImage('');
       setNewProductCategory('other');
+      setNewProductDescription('');
       showAlert('商品上架成功！', 'success');
     }
   };
@@ -395,6 +405,12 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
           className={`flex items-center justify-center gap-3 py-4 px-6 rounded-2xl font-black transition-all whitespace-nowrap ${activeTab === 'products' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}
         >
           <Package size={18} /> <span>商品</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('banners')}
+          className={`flex items-center justify-center gap-3 py-4 px-6 rounded-2xl font-black transition-all whitespace-nowrap ${activeTab === 'banners' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}
+        >
+          <ImageIcon size={18} /> <span>廣告牆</span>
         </button>
         <button
           onClick={() => setActiveTab('mission_approval')}
@@ -774,6 +790,12 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
                   onChange={e => setNewProductPrice(e.target.value)}
                   className="p-3 rounded-xl border border-slate-200 font-bold outline-none focus:ring-2 focus:ring-indigo-500"
                 />
+                <textarea
+                  placeholder="商品介紹 (可選)"
+                  value={newProductDescription}
+                  onChange={e => setNewProductDescription(e.target.value)}
+                  className="p-3 rounded-xl border border-slate-200 font-bold outline-none focus:ring-2 focus:ring-indigo-500 md:col-span-2 h-24"
+                />
                 <input
                   placeholder="庫存數量"
                   type="number"
@@ -1003,6 +1025,75 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
             </table>
           </div>
         </section>
+      )}
+
+      {activeTab === 'banners' && (
+        <div className="bg-white rounded-[3rem] p-12 border border-slate-100 shadow-xl animate-in slide-in-from-bottom-4">
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-3xl font-black text-slate-800 flex items-center gap-3">
+              <ImageIcon className="text-indigo-600" /> 廣告牆管理
+            </h2>
+            <button
+              onClick={() => setIsAddingBanner(!isAddingBanner)}
+              className="bg-indigo-600 text-white px-5 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+            >
+              <Plus size={20} /> 新增廣告
+            </button>
+          </div>
+
+          {isAddingBanner && (
+            <div className="bg-slate-50 p-6 rounded-2xl mb-8 border border-slate-200 animate-in fade-in">
+              <h3 className="font-black text-slate-700 mb-4">輸入圖片連結</h3>
+              <div className="flex gap-4">
+                <input
+                  placeholder="https://..."
+                  value={newBannerImage}
+                  onChange={e => setNewBannerImage(e.target.value)}
+                  className="flex-1 p-3 rounded-xl border border-slate-200 font-bold outline-none"
+                />
+                <button
+                  onClick={async () => {
+                    if (newBannerImage) {
+                      await addBanner(newBannerImage);
+                      setNewBannerImage('');
+                      setIsAddingBanner(false);
+                      showAlert('廣告新增成功！', 'success');
+                    }
+                  }}
+                  className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-emerald-700"
+                >
+                  確認
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+            {banners.map(banner => (
+              <div key={banner.id} className="relative group rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all">
+                <img src={banner.imageUrl} alt="banner" className="w-full h-48 object-cover" />
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center">
+                  <button
+                    onClick={async () => {
+                      if (confirm('確定要移除此廣告嗎？')) {
+                        await deleteBanner(banner.id);
+                        showAlert('已移除廣告', 'success');
+                      }
+                    }}
+                    className="bg-white text-rose-500 px-6 py-2 rounded-xl font-black hover:bg-rose-50"
+                  >
+                    移 除
+                  </button>
+                </div>
+              </div>
+            ))}
+            {banners.length === 0 && (
+              <div className="col-span-full py-12 text-center text-slate-400 font-bold bg-slate-50 rounded-2xl border border-slate-200 border-dashed">
+                目前沒有廣告，新增一個來宣傳商品吧！
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {activeTab === 'missions' && (

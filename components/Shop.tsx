@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingCart, AlertCircle, Check, X, Tag, Package } from 'lucide-react';
-import { Product, UserProfile, Redemption, ProductCategory } from '../types';
-import { saveUser, addRedemption, updateProductStock, subscribeToProducts, subscribeToProductCategories } from '../utils/storage';
+import { Product, UserProfile, Redemption, ProductCategory, Banner } from '../types';
+import { saveUser, addRedemption, updateProductStock, subscribeToProducts, subscribeToProductCategories, subscribeToBanners } from '../utils/storage';
 import { useAlert } from './AlertProvider';
 
 interface ShopProps {
@@ -15,6 +15,18 @@ const Shop: React.FC<ShopProps> = ({ user, onUserUpdate }) => {
   const [filter, setFilter] = useState<string>('all');
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
+  const [banners, setBanners] = useState<Banner[]>([]);
+  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+
+  useEffect(() => {
+    // Auto-rotate banners
+    if (banners.length > 1) {
+      const timer = setInterval(() => {
+        setCurrentBannerIndex(prev => (prev + 1) % banners.length);
+      }, 5000);
+      return () => clearInterval(timer);
+    }
+  }, [banners.length]);
 
   useEffect(() => {
     // Subscribe to real-time products updates
@@ -26,9 +38,12 @@ const Shop: React.FC<ShopProps> = ({ user, onUserUpdate }) => {
       setCategories(updatedCats);
     });
 
+    const unsubBanners = subscribeToBanners(setBanners);
+
     return () => {
       unsubProducts();
       unsubCategories();
+      unsubBanners();
     };
   }, []);
 
@@ -74,6 +89,50 @@ const Shop: React.FC<ShopProps> = ({ user, onUserUpdate }) => {
         <h1 className="text-3xl font-bold text-slate-800">點數商城</h1>
         <p className="text-slate-500 mt-1">累積學習能量，換取心儀好物</p>
       </header>
+
+      {/* Banner Carousel */}
+      {banners.length > 0 && (
+        <div className="relative w-full h-48 md:h-64 rounded-[2.5rem] overflow-hidden shadow-2xl shadow-indigo-100 group">
+          <div
+            className="flex transition-transform duration-700 ease-in-out h-full"
+            style={{ transform: `translateX(-${currentBannerIndex * 100}%)` }}
+          >
+            {banners.map(banner => (
+              <div key={banner.id} className="min-w-full h-full relative">
+                <img src={banner.imageUrl} alt="banner" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent flex items-end p-8">
+                  {/* 可預留放置文字或按鈕 */}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Indicators */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+            {banners.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => setCurrentBannerIndex(idx)}
+                className={`w-2 h-2 rounded-full transition-all ${currentBannerIndex === idx ? 'bg-white w-6' : 'bg-white/50 hover:bg-white/80'}`}
+              />
+            ))}
+          </div>
+
+          {/* Controls */}
+          <button
+            onClick={() => setCurrentBannerIndex(prev => (prev - 1 + banners.length) % banners.length)}
+            className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 backdrop-blur p-2 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <Check className="rotate-180" size={20} />
+          </button>
+          <button
+            onClick={() => setCurrentBannerIndex(prev => (prev + 1) % banners.length)}
+            className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 backdrop-blur p-2 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <Check size={20} />
+          </button>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2">
         <button

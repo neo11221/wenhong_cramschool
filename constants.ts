@@ -64,7 +64,7 @@ export const RANKS: RankTitle[] = [
   { name: '知識探索家', threshold: 2000, color: 'bg-green-500', icon: '🔍' },
   { name: '技能熟練工', threshold: 5000, color: 'bg-purple-500', icon: '🛠️' },
   { name: '領域領航員', threshold: 10000, color: 'bg-orange-500', icon: '🚀' },
-  { name: '傳奇大宗師', threshold: 30000, color: 'bg-yellow-500', icon: '👑' }
+  { name: '傳奇大宗師', threshold: 25000, color: 'bg-yellow-500', icon: '👑' }
 ];
 
 export const STORAGE_KEYS = {

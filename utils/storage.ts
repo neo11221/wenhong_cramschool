@@ -12,7 +12,7 @@ import {
   Unsubscribe,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { UserProfile, Redemption, UserRole, Product, Wish, Mission, ChallengeHistory, PointReason, MissionSubmission, ProductCategory } from '../types';
+import { UserProfile, Redemption, UserRole, Product, Wish, Mission, ChallengeHistory, PointReason, MissionSubmission, ProductCategory, Banner } from '../types';
 import { STORAGE_KEYS, PRODUCTS } from '../constants';
 
 // Collections
@@ -26,6 +26,7 @@ const COLLECTIONS = {
   POINT_REASONS: 'pointReasons',
   MISSION_SUBMISSIONS: 'missionSubmissions',
   PRODUCT_CATEGORIES: 'productCategories',
+  BANNERS: 'banners',
 };
 
 const INITIAL_STUDENTS: UserProfile[] = [
@@ -758,4 +759,42 @@ export const subscribeToRedemptions = (
       console.error('Error subscribing to redemptions:', error);
     }
   );
+};
+
+// --- Banners ---
+
+export const addBanner = async (imageUrl: string) => {
+  try {
+    const newBanner: Banner = {
+      id: `banner_${Date.now()}`,
+      imageUrl,
+      active: true,
+      timestamp: Date.now(),
+    };
+    await setDoc(doc(db, COLLECTIONS.BANNERS, newBanner.id), newBanner);
+  } catch (error) {
+    console.error('Error adding banner:', error);
+    throw error;
+  }
+};
+
+export const deleteBanner = async (id: string) => {
+  try {
+    await deleteDoc(doc(db, COLLECTIONS.BANNERS, id));
+  } catch (error) {
+    console.error('Error deleting banner:', error);
+    throw error;
+  }
+};
+
+export const subscribeToBanners = (callback: (banners: Banner[]) => void): Unsubscribe => {
+  const q = query(collection(db, COLLECTIONS.BANNERS));
+  return onSnapshot(q, (snapshot) => {
+    const banners = snapshot.docs.map(doc => doc.data() as Banner);
+    // Sort by timestamp desc
+    banners.sort((a, b) => b.timestamp - a.timestamp);
+    callback(banners);
+  }, (error) => {
+    console.error('Error subscribing to banners:', error);
+  });
 };

@@ -105,3 +105,11 @@ export interface MissionSubmission {
   timestamp: number;
   status: 'pending' | 'approved' | 'rejected';
 }
+
+export interface Banner {
+  id: string;
+  imageUrl: string;
+  link?: string;
+  active: boolean;
+  timestamp: number;
+}
