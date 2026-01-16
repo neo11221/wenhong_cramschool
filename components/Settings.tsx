@@ -18,8 +18,8 @@ const Settings: React.FC<SettingsProps> = ({ user, onUserUpdate }) => {
         if (!file) return;
 
         // Validation
-        if (file.size > 100 * 1024) { // 100KB limit
-            showAlert('檔案太大囉！請選擇小於 100KB 的圖片', 'error');
+        if (file.size > 500 * 1024) { // 500KB limit
+            showAlert('檔案太大囉！請選擇小於 500KB 的圖片', 'error');
             return;
         }
 
@@ -133,7 +133,7 @@ const Settings: React.FC<SettingsProps> = ({ user, onUserUpdate }) => {
                     </div>
 
                     <div className="bg-amber-50 rounded-2xl p-4 text-xs font-bold text-amber-600/80 leading-relaxed text-center max-w-sm">
-                        💡 小提醒：建議使用正方形圖片，檔案大小請小於 100KB 喔！
+                        💡 小提醒：建議使用正方形圖片，檔案大小請小於 500KB 喔！
                     </div>
                 </div>
             </div>

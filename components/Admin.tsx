@@ -237,8 +237,8 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 200 * 1024) { // 200KB limit for products
-      showAlert('圖片太重啦！請選擇小於 200KB 的圖片', 'error');
+    if (file.size > 500 * 1024) { // 500KB limit for products
+      showAlert('圖片太重啦！請選擇小於 500KB 的圖片', 'error');
       return;
     }
 
@@ -255,8 +255,8 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 250 * 1024) { // 250KB limit for banners
-      showAlert('廣告圖太重啦！請選擇小於 250KB 的圖片', 'error');
+    if (file.size > 500 * 1024) { // 500KB limit for banners
+      showAlert('廣告圖太重啦！請選擇小於 500KB 的圖片', 'error');
       return;
     }
 
@@ -1100,22 +1100,26 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
                 <div className="flex flex-col md:flex-row gap-4 items-start">
                   <label className="flex-1 w-full flex items-center justify-center gap-2 p-10 rounded-[2rem] border-2 border-dashed border-slate-300 hover:border-indigo-400 hover:bg-indigo-50 transition-all cursor-pointer font-bold text-slate-500 hover:text-indigo-600">
                     <Upload size={24} />
-                    {newBannerImage ? '已選好精美圖片' : '選擇廣告圖片檔案 (250KB內)'}
+                    {newBannerImage ? '已選好精美圖片' : '選擇廣告圖片檔案 (500KB內)'}
                     <input type="file" className="hidden" accept="image/*" onChange={handleBannerImageSelect} />
                   </label>
 
                   <div className="w-full md:w-64 space-y-4">
-                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest">廣告標籤 (Tag)</label>
-                    <select
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest">廣告標籤 (可自訂內容)</label>
+                    <input
+                      list="banner-tags"
                       value={newBannerTag}
                       onChange={(e) => setNewBannerTag(e.target.value)}
-                      className="w-full p-4 rounded-2xl border-2 border-slate-100 font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all"
-                    >
-                      <option value="精選推薦">精選推薦</option>
-                      <option value="新品上架">新品上架</option>
-                      <option value="特價出清">特價出清</option>
-                      <option value="限時活動">限時活動</option>
-                    </select>
+                      placeholder="輸入或選擇標籤..."
+                      className="w-full p-4 rounded-2xl border-2 border-slate-100 font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all shadow-sm"
+                    />
+                    <datalist id="banner-tags">
+                      <option value="精選推薦" />
+                      <option value="新品上架" />
+                      <option value="特價出清" />
+                      <option value="限時活動" />
+                      <option value="最新公告" />
+                    </datalist>
                     {bannerPreview && <img src={bannerPreview} className="h-32 w-full object-cover rounded-2xl border border-white shadow-lg" alt="preview" />}
                   </div>
                 </div>
