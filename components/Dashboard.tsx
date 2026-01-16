@@ -188,9 +188,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, rank, onUserUpdate }) => {
             {banners.map(banner => (
               <div key={banner.id} className="min-w-full h-full relative">
                 <img src={banner.imageUrl} alt="banner" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-bottom justify-start p-12">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end justify-start p-12">
                   <div className="mt-auto">
-                    <span className="bg-indigo-600/90 backdrop-blur text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-[0.2em] shadow-lg">精選推薦</span>
+                    <span className="bg-indigo-600/90 backdrop-blur text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-[0.2em] shadow-lg">
+                      {banner.tag || '精選推薦'}
+                    </span>
                   </div>
                 </div>
               </div>

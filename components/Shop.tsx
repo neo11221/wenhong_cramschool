@@ -101,7 +101,11 @@ const Shop: React.FC<ShopProps> = ({ user, onUserUpdate }) => {
               <div key={banner.id} className="min-w-full h-full relative">
                 <img src={banner.imageUrl} alt="banner" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent flex items-end p-8">
-                  {/* 可預留放置文字或按鈕 */}
+                  <div className="mt-auto">
+                    <span className="bg-indigo-600/90 backdrop-blur text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg">
+                      {banner.tag || '精選推薦'}
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}

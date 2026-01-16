@@ -109,6 +109,7 @@ export interface MissionSubmission {
 export interface Banner {
   id: string;
   imageUrl: string;
+  tag: string; // "新品上架", "特價出清", "精選推薦" 等
   link?: string;
   active: boolean;
   timestamp: number;

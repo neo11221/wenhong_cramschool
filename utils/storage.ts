@@ -763,11 +763,12 @@ export const subscribeToRedemptions = (
 
 // --- Banners ---
 
-export const addBanner = async (imageUrl: string) => {
+export const addBanner = async (imageUrl: string, tag: string = '精選推薦') => {
   try {
     const newBanner: Banner = {
       id: `banner_${Date.now()}`,
       imageUrl,
+      tag,
       active: true,
       timestamp: Date.now(),
     };

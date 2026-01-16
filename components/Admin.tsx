@@ -62,6 +62,7 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
 
   // 廣告橫幅管理
   const [newBannerImage, setNewBannerImage] = useState('');
+  const [newBannerTag, setNewBannerTag] = useState('精選推薦');
   const [isAddingBanner, setIsAddingBanner] = useState(false);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
 
@@ -1094,21 +1095,37 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
 
           {isAddingBanner && (
             <div className="bg-slate-50 p-6 rounded-2xl mb-8 border border-slate-200 animate-in fade-in">
-              <h3 className="font-black text-slate-700 mb-4">上傳廣告圖片</h3>
+              <h3 className="font-black text-slate-700 mb-4">上傳廣告圖片與設定標籤</h3>
               <div className="flex flex-col gap-4">
-                <div className="flex gap-4 items-center">
-                  <label className="flex-1 flex items-center justify-center gap-2 p-10 rounded-[2rem] border-2 border-dashed border-slate-300 hover:border-indigo-400 hover:bg-indigo-50 transition-all cursor-pointer font-bold text-slate-500 hover:text-indigo-600">
+                <div className="flex flex-col md:flex-row gap-4 items-start">
+                  <label className="flex-1 w-full flex items-center justify-center gap-2 p-10 rounded-[2rem] border-2 border-dashed border-slate-300 hover:border-indigo-400 hover:bg-indigo-50 transition-all cursor-pointer font-bold text-slate-500 hover:text-indigo-600">
                     <Upload size={24} />
                     {newBannerImage ? '已選好精美圖片' : '選擇廣告圖片檔案 (250KB內)'}
                     <input type="file" className="hidden" accept="image/*" onChange={handleBannerImageSelect} />
                   </label>
-                  {bannerPreview && <img src={bannerPreview} className="h-32 w-48 object-cover rounded-2xl border border-white shadow-lg" alt="preview" />}
+
+                  <div className="w-full md:w-64 space-y-4">
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest">廣告標籤 (Tag)</label>
+                    <select
+                      value={newBannerTag}
+                      onChange={(e) => setNewBannerTag(e.target.value)}
+                      className="w-full p-4 rounded-2xl border-2 border-slate-100 font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all"
+                    >
+                      <option value="精選推薦">精選推薦</option>
+                      <option value="新品上架">新品上架</option>
+                      <option value="特價出清">特價出清</option>
+                      <option value="限時活動">限時活動</option>
+                    </select>
+                    {bannerPreview && <img src={bannerPreview} className="h-32 w-full object-cover rounded-2xl border border-white shadow-lg" alt="preview" />}
+                  </div>
                 </div>
+
                 <button
                   onClick={async () => {
                     if (newBannerImage) {
-                      await addBanner(newBannerImage);
+                      await addBanner(newBannerImage, newBannerTag);
                       setNewBannerImage('');
+                      setNewBannerTag('精選推薦');
                       setBannerPreview(null);
                       setIsAddingBanner(false);
                       showAlert('廣告新增成功！', 'success');
@@ -1128,6 +1145,11 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
             {banners.map(banner => (
               <div key={banner.id} className="relative group rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all">
                 <img src={banner.imageUrl} alt="banner" className="w-full h-48 object-cover" />
+                <div className="absolute top-4 left-4">
+                  <span className="bg-indigo-600/90 backdrop-blur text-white px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider shadow-lg">
+                    {banner.tag || '精選推薦'}
+                  </span>
+                </div>
                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center">
                   <button
                     onClick={async () => {
