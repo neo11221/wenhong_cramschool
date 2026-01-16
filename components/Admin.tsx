@@ -5,6 +5,7 @@ import { Html5Qrcode } from 'html5-qrcode';
 import { Redemption, UserProfile, Product, UserRole, Mission, PointReason, Wish, MissionSubmission, ProductCategory, Banner } from '../types';
 import { updateRedemptionStatus, approveStudent, deleteStudent, addProduct, addMission, toggleMission, saveStudents, subscribeToStudents, subscribeToRedemptions, subscribeToProducts, subscribeToMissions, deleteProduct, addPointReason, deletePointReason, subscribeToPointReasons, subscribeToWishes, deleteWish, subscribeToMissionSubmissions, approveMission, rejectMission, updateProductStock, subscribeToProductCategories, addProductCategory, deleteProductCategory, saveStudent, addBanner, deleteBanner, subscribeToBanners } from '../utils/storage';
 import { useAlert } from './AlertProvider';
+import { Upload } from 'lucide-react';
 import { RANKS, GRADES } from '../constants';
 
 interface AdminProps {
@@ -57,10 +58,12 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
   const [newProductImage, setNewProductImage] = useState('');
   const [newProductDescription, setNewProductDescription] = useState('');
   const [isAddingProduct, setIsAddingProduct] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   // 廣告橫幅管理
   const [newBannerImage, setNewBannerImage] = useState('');
   const [isAddingBanner, setIsAddingBanner] = useState(false);
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
 
   // 分類管理
   const [newCatName, setNewCatName] = useState('');
@@ -220,6 +223,51 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
     showAlert(`發送成功！已給予 ${targetStudent.name} ${pts} 點。`, 'success');
   };
 
+  const handleFileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleProductImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 200 * 1024) { // 200KB limit for products
+      showAlert('圖片太重啦！請選擇小於 200KB 的圖片', 'error');
+      return;
+    }
+
+    try {
+      const base64 = await handleFileToBase64(file);
+      setNewProductImage(base64);
+      setImagePreview(base64);
+    } catch (err) {
+      showAlert('讀取圖片失敗', 'error');
+    }
+  };
+
+  const handleBannerImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 250 * 1024) { // 250KB limit for banners
+      showAlert('廣告圖太重啦！請選擇小於 250KB 的圖片', 'error');
+      return;
+    }
+
+    try {
+      const base64 = await handleFileToBase64(file);
+      setNewBannerImage(base64);
+      setBannerPreview(base64);
+    } catch (err) {
+      showAlert('讀取圖片失敗', 'error');
+    }
+  };
+
   const handleUpdateGrade = async (student: UserProfile, newGrade: string) => {
     const updated = { ...student, grade: newGrade };
     await saveStudent(updated);
@@ -260,6 +308,7 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
       setNewProductPrice('');
       setNewProductStock('');
       setNewProductImage('');
+      setImagePreview(null);
       setNewProductCategory('other');
       setNewProductDescription('');
       showAlert('商品上架成功！', 'success');
@@ -777,12 +826,14 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
                   ))}
                   {categories.length === 0 && <option value="">請先新增分類</option>}
                 </select>
-                <input
-                  placeholder="圖片連結 (可選)"
-                  value={newProductImage}
-                  onChange={e => setNewProductImage(e.target.value)}
-                  className="p-3 rounded-xl border border-slate-200 font-bold outline-none focus:ring-2 focus:ring-indigo-500"
-                />
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-dashed border-slate-300 hover:border-indigo-400 hover:bg-indigo-50 transition-all cursor-pointer font-bold text-slate-500 hover:text-indigo-600">
+                    <Upload size={18} />
+                    {newProductImage ? '已選擇圖片' : '上傳商品圖片 (200KB內)'}
+                    <input type="file" className="hidden" accept="image/*" onChange={handleProductImageSelect} />
+                  </label>
+                  {imagePreview && <img src={imagePreview} className="h-20 w-auto object-cover rounded-lg border border-slate-200" alt="preview" />}
+                </div>
                 <input
                   placeholder="價格 (點數)"
                   type="number"
@@ -1043,26 +1094,31 @@ const Admin: React.FC<AdminProps> = ({ onRefresh }) => {
 
           {isAddingBanner && (
             <div className="bg-slate-50 p-6 rounded-2xl mb-8 border border-slate-200 animate-in fade-in">
-              <h3 className="font-black text-slate-700 mb-4">輸入圖片連結</h3>
-              <div className="flex gap-4">
-                <input
-                  placeholder="https://..."
-                  value={newBannerImage}
-                  onChange={e => setNewBannerImage(e.target.value)}
-                  className="flex-1 p-3 rounded-xl border border-slate-200 font-bold outline-none"
-                />
+              <h3 className="font-black text-slate-700 mb-4">上傳廣告圖片</h3>
+              <div className="flex flex-col gap-4">
+                <div className="flex gap-4 items-center">
+                  <label className="flex-1 flex items-center justify-center gap-2 p-10 rounded-[2rem] border-2 border-dashed border-slate-300 hover:border-indigo-400 hover:bg-indigo-50 transition-all cursor-pointer font-bold text-slate-500 hover:text-indigo-600">
+                    <Upload size={24} />
+                    {newBannerImage ? '已選好精美圖片' : '選擇廣告圖片檔案 (250KB內)'}
+                    <input type="file" className="hidden" accept="image/*" onChange={handleBannerImageSelect} />
+                  </label>
+                  {bannerPreview && <img src={bannerPreview} className="h-32 w-48 object-cover rounded-2xl border border-white shadow-lg" alt="preview" />}
+                </div>
                 <button
                   onClick={async () => {
                     if (newBannerImage) {
                       await addBanner(newBannerImage);
                       setNewBannerImage('');
+                      setBannerPreview(null);
                       setIsAddingBanner(false);
                       showAlert('廣告新增成功！', 'success');
+                    } else {
+                      showAlert('請先選擇圖片檔案喔', 'error');
                     }
                   }}
-                  className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-emerald-700"
+                  className="bg-emerald-600 text-white px-6 py-4 rounded-2xl font-black text-lg hover:bg-emerald-700 shadow-xl shadow-emerald-100 active:scale-95"
                 >
-                  確認
+                  確認發布廣告
                 </button>
               </div>
             </div>

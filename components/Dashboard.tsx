@@ -4,7 +4,8 @@ import { Trophy, TrendingUp, Sparkles, CheckCircle, ChevronRight, Medal, Flame, 
 import { UserProfile, RankTitle, Mission, MissionSubmission } from '../types';
 import { RANKS } from '../constants';
 import { getEncouragement } from '../services/geminiService';
-import { subscribeToMissions, subscribeToMissionSubmissions, submitMission, hasCompletedMission } from '../utils/storage';
+import { subscribeToMissions, subscribeToMissionSubmissions, submitMission, hasCompletedMission, subscribeToBanners } from '../utils/storage';
+import { Banner } from '../types';
 import { useAlert } from './AlertProvider';
 
 interface DashboardProps {
@@ -21,6 +22,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, rank, onUserUpdate }) => {
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [completedMissionIds, setCompletedMissionIds] = useState<Set<string>>(new Set());
   const [showRankGuide, setShowRankGuide] = useState(false);
+  const [banners, setBanners] = useState<Banner[]>([]);
+  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
 
   const nextRank = RANKS[RANKS.indexOf(rank) + 1] || null;
   const progress = nextRank
@@ -57,11 +60,23 @@ const Dashboard: React.FC<DashboardProps> = ({ user, rank, onUserUpdate }) => {
       setSubmissions(allSubmissions.filter(s => s.userId === user.id && s.timestamp >= today.getTime()));
     });
 
+    const unsubscribeBanners = subscribeToBanners(setBanners);
+
+    // Auto-rotate banners
+    let timer: any;
+    if (banners.length > 1) {
+      timer = setInterval(() => {
+        setCurrentBannerIndex(prev => (prev + 1) % banners.length);
+      }, 5000);
+    }
+
     return () => {
       unsubscribeMissions();
       unsubscribeSubmissions();
+      unsubscribeBanners();
+      if (timer) clearInterval(timer);
     };
-  }, [user.id, rank]);
+  }, [user.id, rank, banners.length]);
 
   const handleCompleteMission = async (mission: Mission) => {
     if (completingId) return;
@@ -162,6 +177,52 @@ const Dashboard: React.FC<DashboardProps> = ({ user, rank, onUserUpdate }) => {
           </div>
         </div>
       </header>
+
+      {/* Banner Carousel */}
+      {banners.length > 0 && (
+        <div className="relative w-full h-48 md:h-72 rounded-[3.5rem] overflow-hidden shadow-2xl shadow-indigo-100 group border-4 border-white">
+          <div
+            className="flex transition-transform duration-700 ease-in-out h-full"
+            style={{ transform: `translateX(-${currentBannerIndex * 100}%)` }}
+          >
+            {banners.map(banner => (
+              <div key={banner.id} className="min-w-full h-full relative">
+                <img src={banner.imageUrl} alt="banner" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-bottom justify-start p-12">
+                  <div className="mt-auto">
+                    <span className="bg-indigo-600/90 backdrop-blur text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-[0.2em] shadow-lg">精選推薦</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Indicators */}
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-3">
+            {banners.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => setCurrentBannerIndex(idx)}
+                className={`w-2.5 h-2.5 rounded-full transition-all ${currentBannerIndex === idx ? 'bg-white w-10 shadow-lg' : 'bg-white/40 hover:bg-white/80'}`}
+              />
+            ))}
+          </div>
+
+          {/* Controls */}
+          <button
+            onClick={() => setCurrentBannerIndex(prev => (prev - 1 + banners.length) % banners.length)}
+            className="absolute left-6 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 backdrop-blur p-4 rounded-full text-white opacity-0 group-hover:opacity-100 transition-all border border-white/10"
+          >
+            <ChevronRight className="rotate-180" size={24} />
+          </button>
+          <button
+            onClick={() => setCurrentBannerIndex(prev => (prev + 1) % banners.length)}
+            className="absolute right-6 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 backdrop-blur p-4 rounded-full text-white opacity-0 group-hover:opacity-100 transition-all border border-white/10"
+          >
+            <ChevronRight size={24} />
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="md:col-span-2 bg-white rounded-[2.5rem] p-10 border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden">
